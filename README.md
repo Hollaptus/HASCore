@@ -1,10 +1,10 @@
 # JN Soundboard Core
 
-This project is a continuation of a project "JNSoundboard" (https://github.com/Nothing4You/JNSoundboard), using the same source code, but reworked and made on ".NET Core" instead of ".NET Framework".
+This project is a continuation of a project ["JNSoundboard"](https://github.com/Nothing4You/JNSoundboard), using the same source code, but reworked and made on ".NET Core" instead of ".NET Framework".
 
 A program written in C# using the NAudio library that uses hotkeys to play sounds into a chosen sound device. It is similar to [EXP Soundboard](https://sourceforge.net/projects/expsoundboard/), except that JN Soundboard Core is not as cross-platform as EXP, but, there are more features in JNC than EXP.
 
-**Binaries are on the [Tags](https://gitlab.com/Jitnaught/JNSoundboardCore/tags) page.**
+**Binaries are on the [Releases](https://github.com/Hollaptus/JNSoundboardCore/releases/) page.**
 
 Features:
 * Can play MP3, WAV, WMA, M4A, and AC3 audio files
