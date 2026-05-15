@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿// Declaring use of this library because of the attributes
+// on the partial functions that are being imported from system.
+using System.Runtime.InteropServices;
 
 namespace JNSoundboardCore
 {
@@ -16,11 +18,11 @@ namespace JNSoundboardCore
     ///     </item>
     /// </list>
     /// </summary>
-    partial class Helper
+    public partial class Helper
     {
         /// Description
         /// <summary>
-        ///     Function for finding top-level window
+        ///     Function for finding top-level window through OS-level methods.
         /// </summary>
         /// <remarks>
         ///     Retrieves a handle to the top-level window whose class name and window name match the specified Strings. 
@@ -46,7 +48,7 @@ namespace JNSoundboardCore
         
         /// Description
         /// <summary>
-        ///     Function for getting the active window
+        ///     Function for getting the active window through OS-level methods.
         /// </summary>
         /// <remarks>
         ///     Retrieves a handle to the foreground window (the window with which the user is currently working).
@@ -60,111 +62,214 @@ namespace JNSoundboardCore
         [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
         internal static partial IntPtr GetForegroundWindow();
         
-        internal static Boolean IsForegroundWindow(String windowTitle)
-        {
-            IntPtr foregroundWindow = GetForegroundWindow();
+        // internal static Boolean IsForegroundWindow(String windowTitle)
+        // {
+        //     // Trying to get the pointer to the foreground window.
+        //     IntPtr foregroundWindow = GetForegroundWindow();
 
-            return IsForegroundWindow(foregroundWindow, windowTitle);
-        }
+        //     // Return the result of the overloaded function IsForegroundWindow(),
+        //     // finding the window by its pointer
+        //     return IsForegroundWindow(windowTitle, foregroundWindow);
+        // }
 
-        internal static Boolean IsForegroundWindow(IntPtr foregroundWindow, String windowTitle)
+        /// Description
+        /// <summary>
+        ///     Function for checking if the specified window is the foreground window.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="windowTitle">Title of the window that we need to find.</param>
+        /// 
+        /// Return value
+        /// <returns>
+        ///     <para>Returns <see cref="true"/> if the window specified by its title is, in fact, the foreground window.</para>
+        ///     <para>Otherwise, returns <see cref="false"/>.</para> 
+        /// </returns>
+        internal static Boolean IsForegroundWindow(String? windowTitle, IntPtr? foregroundWindow = null)
         {
+            // If the window title is empty, then there is no window to find.
+            if (String.IsNullOrEmpty(windowTitle)) return false;
+
+            // Trying to get a window by its title.
             IntPtr window = FindWindow(null, windowTitle);
+            
+            // The window hasn't been found, so we return 'false'.
+            if (window == IntPtr.Zero) return false;
 
-            if (window == IntPtr.Zero) return false; //not found
-
+            // Otherwise we return the result of comparison between
+            // the window pointer that has been found and the pointer of
+            // a foreground window we try to compare to.
             return foregroundWindow == window;
         }
 
+        /// Description
+        /// <summary>
+        ///     Function to invoke OS-level file manager for user to select a XML file path.
+        /// </summary>
+        /// 
+        /// Return value
+        /// <returns>
+        ///     Path to a file that has been selected in the dialog box.
+        /// </returns>
         internal static String UserGetXMLLocation()
         {
             SaveFileDialog dialog = new() { Filter = "XML file containing keys and sounds|*.xml" };
-            return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : "";            
+            return dialog.ShowDialog() == DialogResult.OK ? dialog.FileName : String.Empty;            
         }
 
-        internal static List<String> KeysArrayToStringArray(Keys[] keysArr)
+        /// Description
+        /// <summary>
+        ///     Function to convert a <see cref="List"/> of <see cref="Keys"/> into a <see cref="List"/> of <see cref="String"/> values.  
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="keysList">
+        ///     A <see cref="List"/> of <see cref="Keys"/> that has to be converted to <see cref="String"/> <see cref="List"/>.
+        /// </param>
+        /// 
+        /// Return value
+        /// <returns>
+        ///     A <see cref="List"/> of <see cref="String"/> values of key combination.
+        /// </returns>
+        internal static List<String> KeysArrayToStringArray(List<Keys> keysList)
         {
-            List<String> arr = [];
-            for (Int32 i = 0; i < keysArr.Length; i++)
-                arr.Add(keysArr[i].ToString());
-            return [.. arr];
+            // Initializing an empty List of Strings that will be converted to with string values of Keys. 
+            List<String> keyStringsList = [];
+
+            // Iterating through the list to convert values to String.
+            for (Int32 i = 0; i < keysList.Count; i++)
+                keyStringsList.Add(keysList[i].ToString());
+
+            // Return the collection of strings that we have built.   
+            return keyStringsList;
         }
 
-        internal static Keys[] StringArrayToKeysArray(List<String> strArr)
+        /// Description
+        /// <summary>
+        ///     Function to convert a <see cref="List"/> of <see cref="Keys"/> into an <see cref="List"/> of <see cref="String"/> values.  
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="stringsList"></param>
+        /// 
+        /// Return value
+        /// <returns>
+        ///     A <see cref="List"/> of <see cref="Keys"/> values of key combination.
+        /// </returns>
+        internal static List<Keys> StringArrayToKeysArray(List<String> stringsList)
         {
-            if (strArr is null) return [0];
-            List<Keys> arr = [];
+            // If the strings parameter is empty, return an empty array. 
+            if (stringsList is null) return [];
 
-            for (Int32 i = 0; i < strArr.Count; i++)
-            {
-                if (Enum.TryParse(strArr[i], out Keys key)) arr.Add(key);
-                else return [0];
+            // Initializing an empty List of Keys that the string values will be converted to. 
+            List<Keys> keysList = [];
+
+            // Iterating through the list to convert values to Keys.
+            for (Int32 i = 0; i < stringsList.Count; i++)
+            {   
+                // If the value can be converted as Keys, then we add it to the list.
+                if (Enum.TryParse(stringsList[i], out Keys key)) keysList.Add(key);
+                // Otherwise there is no reason to iterate through other values, 
+                // just return an empty List.
+                else return [];
             }
 
-            return [.. arr];
+            // Return the collection of keys that we have built.
+            return keysList;
         }
 
-        internal static Boolean KeysArrayFromString(String key, out Keys[]? keysArr, out String errorMessage)
+        /// Description
+        /// <summary>
+        ///     Function to convert a <see cref="String"/> into a <see cref="List"/> of <see cref="Keys"/>.  
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="keysString">A <see cref="String"/> of key combinations that has to be converted to <see cref="Keys"/> <see cref="List"/>.</param>
+        /// <param name="keysList">A resulting <see cref="List"/> of <see cref="Keys"/> that has been converted from the <paramref name="keysString"/>.</param>
+        /// <param name="errorMessage">An error message that has occured after this function tried to convert the values.</param>
+        /// 
+        /// Return value
+        /// <returns>
+        ///     A <see cref="List"/> of <see cref="Keys"/> converted from <paramref name="keysString"/>.
+        /// </returns>
+        internal static Boolean KeysArrayFromString(String? keysString, out List<Keys>? keysList, out String? errorMessage)
         {
-            if (key.Contains('+'))
+            // If the string is not empty or null, and it is a combination:
+            if (!String.IsNullOrEmpty(keysString) && keysString.Contains('+'))
             {
-                List<String> sKeys = [..key.Split('+')];
-                List<Keys> kKeys = new List<Keys>();
+                // Initializing a new list to store different key strings.
+                List<String> stringKeys = [..keysString.Split('+')];
+                // Initializing a new list to store processed keys.
+                List<Keys> keys = [];
 
-                for (Int32 i = 0; i < sKeys.Count; i++)
+                // Iterating through the stringKeys to convert their values to Keys.
+                for (Int32 i = 0; i < stringKeys.Count; i++)
                 {
-                    if (Enum.TryParse(sKeys[i], out Keys kKey)) kKeys.Add(kKey);  
+                    // If the value can be converted, we add it to the list.
+                    if (Enum.TryParse(stringKeys[i], out Keys kKey)) keys.Add(kKey);  
+                    // Otherwise we return an error that we couldn't convert the values.
                     else
                     {
-                        errorMessage = $"Key String \"{sKeys[i]}\" doesn't exist";
-                        keysArr = null;
+                        errorMessage = $"Key String \"{stringKeys[i]}\" doesn't exist.";
+                        keysList = null;
                         return false;
                     }
                 }
 
-                keysArr = [..kKeys];
+                // Assigning the variables to their respected new values. 
+                keysList = [..keys];
+                errorMessage = String.Empty;
+                // Return that we successfully converted the string.
+                return true;
+            }
+            // If the string is not empty or null, and it is just one key:
+            else if (!String.IsNullOrEmpty(keysString) && Enum.TryParse(keysString, out Keys key))
+            {
+                // Just return a List with one value.
+                keysList = [key];
                 errorMessage = String.Empty;
                 return true;
             }
+            // Otherwise we return an error that we cannot convert this string to a List.
             else
             {
-                if (Enum.TryParse(key, out Keys kKey))
-                {
-                    keysArr = [kKey];
-                    errorMessage = String.Empty;
-                    return true;
-                }
-                else
-                {
-                    errorMessage = "Key String \"" + key + "\" doesn't exist";
-                    keysArr = null;
-                    return false;
-                }
+                errorMessage = "Key String \"" + keysString + "\" doesn't exist.";
+                keysList = null;
+                return false;
             }
         }
 
-        internal static String KeysToString(params Keys[] keysArr)
+        /// Description
+        /// <summary>
+        ///     Function to convert a <see cref="List"/> of <see cref="Keys"> into a <see cref="String"/>.  
+        /// </summary>
+        /// <param name="keysList"></param>
+        /// <returns></returns>
+        internal static String KeysToString(params List<Keys>? keysList)
         {
-            if (keysArr is null) return "";
-            String temp = "";
-            Int32 kLen = keysArr.Length;
+            // If the list is empty, we cannot convert anything, return an empty string.
+            if (keysList is null) return String.Empty;
+            
+            // String temp = "";
+            // Int32 kLen = keysList.Count;
 
-            for (Int32 i = 0; i < kLen; i++)
-            {
-                temp += keysArr[i].ToString() + (i == kLen - 1 ? "" : "+");
-            }
+            // for (Int32 i = 0; i < kLen; i++)
+            // {   
+            //     temp += keysList[i].ToString() + (i == kLen - 1 ? "" : "+");
+            // }
 
-            return temp;
+            // return temp;
+            return String.Join('+', keysList);
         }
 
-        internal static Boolean SoundLocsArrayFromString(String soundLocsStr, out String[] soundLocs, out String errorMessage)
+        internal static Boolean SoundLocsArrayFromString(String soundLocsStr, out List<String>? soundLocs, out String errorMessage)
         {
             if (soundLocsStr.Contains(';'))
             {
-                String[] sLocs = soundLocsStr.Split(';');
-                List<String> lLocs = new List<String>();
+                List<String> sLocs = [.. soundLocsStr.Split(';')];
+                List<String> lLocs = new();
 
-                for (Int32 i = 0; i < sLocs.Length; i++)
+                for (Int32 i = 0; i < sLocs.Count; i++)
                 {
                     if (File.Exists(sLocs[i]))
                     {
@@ -178,7 +283,7 @@ namespace JNSoundboardCore
                     }
                 }
 
-                soundLocs = lLocs.ToArray();
+                soundLocs = lLocs;
                 errorMessage = String.Empty;
                 return true;
             }
@@ -199,10 +304,10 @@ namespace JNSoundboardCore
             }
         }
 
-        internal static String SoundLocsArrayToString(String[] soundLocations)
+        internal static String SoundLocsArrayToString(List<String> soundLocations)
         {
             String temp = "";
-            Int32 sLen = soundLocations.Length;
+            Int32 sLen = soundLocations.Count;
 
             for (Int32 i = 0; i < sLen; i++)
             {

@@ -5,22 +5,22 @@ namespace JNSoundboardCore
 {
     public partial class TextToSpeechForm : Form
     {
-        MainForm mainForm;
-        SpeechSynthesizer synth;
+        private MainForm? MainForm;
+        private SpeechSynthesizer? Synth;
 
         public TextToSpeechForm()
         {
             InitializeComponent();
         }
 
-        private void TTS_Load(object sender, EventArgs e)
+        private void TTS_Load(Object sender, EventArgs e)
         {
-            mainForm = Application.OpenForms[0] as MainForm;
+            MainForm = Application.OpenForms[0] as MainForm;
         }
 
-        private void btnBrowseFolderLoc_Click(object sender, EventArgs e)
+        private void BrowseFolderLocationButton_Click(Object sender, EventArgs e)
         {
-            FolderBrowserDialog diag = new FolderBrowserDialog();
+            FolderBrowserDialog diag = new();
 
             if (diag.ShowDialog() == DialogResult.OK)
             {
@@ -28,22 +28,22 @@ namespace JNSoundboardCore
             }
         }
 
-        private void btnCreateWAV_Click(object sender, EventArgs e)
+        private void CreateWAVButton_Click(Object sender, EventArgs e)
         {
-            if (!string.IsNullOrWhiteSpace(tbText.Text) && !string.IsNullOrWhiteSpace(tbWhereSave.Text) && Directory.Exists(tbWhereSave.Text))
+            if (!String.IsNullOrWhiteSpace(tbText.Text) && !String.IsNullOrWhiteSpace(tbWhereSave.Text) && Directory.Exists(tbWhereSave.Text))
             {
-                string path = tbWhereSave.Text + "\\" + Helper.CleanFileName(tbText.Text.Replace(" ", "") + ".wav");
+                String path = tbWhereSave.Text + "\\" + Helper.CleanFileName(tbText.Text.Replace(" ", "") + ".wav");
 
-                synth = new SpeechSynthesizer();
-                synth.SetOutputToWaveFile(path);
+                Synth = new();
+                Synth.SetOutputToWaveFile(path);
 
-                PromptBuilder builder = new PromptBuilder();
+                PromptBuilder builder = new();
                 builder.AppendText(tbText.Text);
 
-                synth.Speak(builder);
+                Synth.Speak(builder);
 
-                synth.Dispose();
-                synth = null;
+                Synth.Dispose();
+                Synth = null;
 
                 MessageBox.Show("File saved to " + path);
             }
@@ -53,40 +53,40 @@ namespace JNSoundboardCore
             }
         }
 
-        private void btnCreateWAVAdd_Click(object sender, EventArgs e)
+        private void CreateWAVAddButton_Click(Object sender, EventArgs e)
         {
-            if (!string.IsNullOrWhiteSpace(tbText.Text) && !string.IsNullOrWhiteSpace(tbKeys.Text) && !string.IsNullOrWhiteSpace(tbWhereSave.Text) && Directory.Exists(tbWhereSave.Text))
+            if (!String.IsNullOrWhiteSpace(tbText.Text) && !String.IsNullOrWhiteSpace(tbKeys.Text) && !String.IsNullOrWhiteSpace(tbWhereSave.Text) && Directory.Exists(tbWhereSave.Text))
             {
 
-                if (Helper.KeysArrayFromString(tbKeys.Text, out Keys[] convertedKeys, out string error))
+                if (Helper.KeysArrayFromString(tbKeys.Text, out List<Keys>? convertedKeys, out String? error))
                 {
-                    if (convertedKeys.Length > 0)
+                    if (convertedKeys?.Count > 0)
                     {
-                        XMLSettings.SoundHotkey newSH = new XMLSettings.SoundHotkey(convertedKeys, "", [tbWhereSave.Text + "\\" + Helper.CleanFileName(tbText.Text.Replace(" ", "") + ".wav")]);
+                        XMLSettings.SoundHotkey newSH = new(convertedKeys, "", [tbWhereSave.Text + "\\" + Helper.CleanFileName(tbText.Text.Replace(" ", "") + ".wav")]);
 
-                        synth = new SpeechSynthesizer();
-                        synth.SetOutputToWaveFile(newSH.SoundLocations[0]);
+                        Synth = new SpeechSynthesizer();
+                        Synth.SetOutputToWaveFile(newSH.SoundLocations?[0]);
 
-                        PromptBuilder builder = new PromptBuilder();
+                        PromptBuilder builder = new();
                         builder.AppendText(tbText.Text);
 
-                        synth.Speak(builder);
+                        Synth.Speak(builder);
 
-                        synth.Dispose();
-                        synth = null;
+                        Synth.Dispose();
+                        Synth = null;
 
-                        mainForm.soundHotkeys.Add(newSH);
+                        MainForm?.SoundHotkeys.Add(newSH);
 
-                        ListViewItem newItem = new ListViewItem(tbKeys.Text);
+                        ListViewItem newItem = new(tbKeys.Text);
                         newItem.SubItems.Add(""); //window title
-                        newItem.SubItems.Add(newSH.SoundLocations[0]);
+                        newItem.SubItems.Add(newSH.SoundLocations?[0]);
 
-                        mainForm.lvKeySounds.Items.Add(newItem);
+                        MainForm?.KeySoundsListView?.Items.Add(newItem);
 
-                        mainForm.lvKeySounds.ListViewItemSorter = new ListViewItemComparer(0);
-                        mainForm.lvKeySounds.Sort();
+                        MainForm?.KeySoundsListView?.ListViewItemSorter = new ListViewItemComparer(0);
+                        MainForm?.KeySoundsListView?.Sort();
 
-                        mainForm.soundHotkeys.Sort(delegate (XMLSettings.SoundHotkey x, XMLSettings.SoundHotkey y)
+                        MainForm?.SoundHotkeys.Sort(delegate (XMLSettings.SoundHotkey x, XMLSettings.SoundHotkey y)
                         {
                             if (x.Keys == null && y.Keys == null) return 0;
                             else if (x.Keys == null) return -1;
@@ -94,12 +94,12 @@ namespace JNSoundboardCore
                             else return Helper.KeysToString(x.Keys).CompareTo(Helper.KeysToString(y.Keys));
                         });
 
-                        MessageBox.Show("File saved to " + newSH.SoundLocations[0]);
+                        MessageBox.Show("File saved to " + newSH.SoundLocations?[0]);
                     }
                 }
                 else
                 {
-                    MessageBox.Show("Keys string incorrectly made. Check for spelling errors");
+                    MessageBox.Show("Keys String incorrectly made. Check for spelling errors");
                 }
             }
             else
@@ -108,24 +108,24 @@ namespace JNSoundboardCore
             }
         }
 
-        private void btnClose_Click(object sender, EventArgs e)
+        private void CloseButton_Click(Object sender, EventArgs e)
         {
             this.Close();
         }
 
-        private void tbKeys_Enter(object sender, EventArgs e)
+        private void KeysTextBox_Enter(Object sender, EventArgs e)
         {
             timer1.Enabled = true;
         }
 
-        private void tbKeys_Leave(object sender, EventArgs e)
+        private void KeysTextBox_Leave(Object sender, EventArgs e)
         {
             timer1.Enabled = false;
         }
 
         int lastAmountPressed = 0;
 
-        private void timer1_Tick(object sender, EventArgs e)
+        private void MainTimer_Tick(Object sender, EventArgs e)
         {
             int amountPressed = 0;
 
@@ -137,9 +137,9 @@ namespace JNSoundboardCore
             }
             else
             {
-                List<Keys> pressedKeys = new List<Keys>();
+                List<Keys> pressedKeys = [];
 
-                foreach (Keys key in Enum.GetValues(typeof(Keys)))
+                foreach (Keys key in Enum.GetValues<Keys>())
                 {
                     if (Keyboard.IsKeyDown(key))
                     {
@@ -150,7 +150,7 @@ namespace JNSoundboardCore
 
                 if (amountPressed > lastAmountPressed)
                 {
-                    tbKeys.Text = Helper.KeysToString(pressedKeys.ToArray());
+                    tbKeys.Text = Helper.KeysToString(pressedKeys);
                 }
 
                 lastAmountPressed = amountPressed;

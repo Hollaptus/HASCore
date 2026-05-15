@@ -55,8 +55,8 @@
             this.tbKeys.ReadOnly = true;
             this.tbKeys.Size = new System.Drawing.Size(346, 20);
             this.tbKeys.TabIndex = 2;
-            this.tbKeys.Enter += new System.EventHandler(this.tbKeys_Enter);
-            this.tbKeys.Leave += new System.EventHandler(this.tbKeys_Leave);
+            this.tbKeys.Enter += new System.EventHandler(this.KeysTextBox_Enter);
+            this.tbKeys.Leave += new System.EventHandler(this.KeysTextBox_Leave);
             // 
             // btnOK
             // 
@@ -67,7 +67,7 @@
             this.btnOK.TabIndex = 6;
             this.btnOK.Text = "OK";
             this.btnOK.UseVisualStyleBackColor = true;
-            this.btnOK.Click += new System.EventHandler(this.btnOK_Click);
+            this.btnOK.Click += new System.EventHandler(this.OKButton_Click);
             // 
             // btnCancel
             // 
@@ -79,7 +79,7 @@
             this.btnCancel.TabIndex = 7;
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = true;
-            this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
+            this.btnCancel.Click += new System.EventHandler(this.CancelButton_Click);
             // 
             // tbLocation
             // 
@@ -117,11 +117,11 @@
             this.btnBrowseSoundLoc.TabIndex = 1;
             this.btnBrowseSoundLoc.Text = "...";
             this.btnBrowseSoundLoc.UseVisualStyleBackColor = true;
-            this.btnBrowseSoundLoc.Click += new System.EventHandler(this.btnBrowseSoundLoc_Click);
+            this.btnBrowseSoundLoc.Click += new System.EventHandler(this.BrowseSoundLocationButton_Click);
             // 
             // timer1
             // 
-            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
+            this.timer1.Tick += new System.EventHandler(this.MainTimer_Tick);
             // 
             // gbWindowRestriction
             // 
@@ -148,7 +148,7 @@
             this.btnReloadWindows.Size = new System.Drawing.Size(22, 22);
             this.btnReloadWindows.TabIndex = 5;
             this.btnReloadWindows.UseVisualStyleBackColor = true;
-            this.btnReloadWindows.Click += new System.EventHandler(this.btnReloadWindows_Click);
+            this.btnReloadWindows.Click += new System.EventHandler(this.ReloadWindowsButton_Click);
             // 
             // cbEnableRestrictWindow
             // 
@@ -159,7 +159,7 @@
             this.cbEnableRestrictWindow.TabIndex = 3;
             this.cbEnableRestrictWindow.Text = "Enable";
             this.cbEnableRestrictWindow.UseVisualStyleBackColor = true;
-            this.cbEnableRestrictWindow.CheckedChanged += new System.EventHandler(this.cbEnableRestrictWindow_CheckedChanged);
+            this.cbEnableRestrictWindow.CheckedChanged += new System.EventHandler(this.EnableRestrictWindowCheckBox_CheckedChanged);
             // 
             // cbWindows
             // 

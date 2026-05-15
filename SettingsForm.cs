@@ -1,174 +1,314 @@
-﻿namespace JNSoundboardCore
+﻿// Declaring the using statement so we don't have to always prepend
+// 'XMLSettings' to an already static fields of the class.
+using static JNSoundboardCore.XMLSettings;
+
+namespace JNSoundboardCore
 {
+    /// Description
+    /// <summary>
+    ///     <see cref="SettingsForm"/> class part for initializing the Object and its event handlers.
+    /// </summary>
     public partial class SettingsForm : Form
     {
-        internal List<XMLSettings.LoadXMLFile> loadXMLFilesList = new List<XMLSettings.LoadXMLFile>(XMLSettings.soundboardSettings.LoadXMLFiles); //list so can dynamically add/remove
-
-        internal static bool addingEditingLoadXMLFile = false;
-
+        // Using List so we can dynamically add and remove entries of XMLSettings.
+        internal List<LoadXMLFile>? LoadXMLFilesList = CurrentSettings?.LoadXMLFiles; 
+        // Flag for checking if we are currently editing XML presets.
+        internal static Boolean EditLoadXMLFile = false;
+        // Counter of amount keys pressed last time (before the event).
+        private Int32 LastAmountPressed = 0;
+        
+        /// Description
+        /// <summary>
+        ///     <see cref="SettingsForm"/> constructor for initialization of class properties.
+        /// </summary>
         public SettingsForm()
         {
+            // Calling initialization procedure from another part of the class.
             InitializeComponent();
-                        
-            for (int i = 0; i < loadXMLFilesList.Count; i++)
+            
+            // Iterating through list of XML presets.
+            for (Int32 i = 0; i < LoadXMLFilesList?.Count; i++)
             {
-                bool keysLengthCorrect = loadXMLFilesList[i].Keys.Length > 0;
-                bool xmlLocationUnempty = !string.IsNullOrWhiteSpace(loadXMLFilesList[i].XMLLocation);
+                // Checking if there are any keys in the hotkeys set.
+                Boolean correctKeysLength = LoadXMLFilesList[i].Keys?.Count > 0;
+                // Checking if there is a path to a file in XML preset.
+                Boolean locationNotEmpty = !String.IsNullOrWhiteSpace(LoadXMLFilesList[i].XMLLocation);
 
-                if (!keysLengthCorrect && !xmlLocationUnempty) //remove if empty
+                // Remove entry if location is empty.
+                if (!correctKeysLength && !locationNotEmpty) 
                 {
-                    loadXMLFilesList.RemoveAt(i);
-                    i--;
+                    // Removing the item at current 'i' value,
+                    // then decreasing it so we have actual count
+                    // of items in the list.
+                    LoadXMLFilesList.RemoveAt(i--);
                     continue;
                 }
 
-                ListViewItem item = new ListViewItem((keysLengthCorrect ? string.Join("+", loadXMLFilesList[i].Keys) : ""));
-                item.SubItems.Add((xmlLocationUnempty ? loadXMLFilesList[i].XMLLocation : ""));
-
-                KeysLocationsListView.Items.Add(item);
+                // Adding a new item to ListView with set hotkeys.
+                ListViewItem item = new(correctKeysLength && LoadXMLFilesList[i].Keys is not null ? String.Join("+", LoadXMLFilesList[i].Keys!) : "");
+                // Adding a path to XML preset that should be enabled through hotkeys.
+                item.SubItems.Add(locationNotEmpty ? LoadXMLFilesList[i].XMLLocation : "");
+                // Adding the item to the view.
+                KeysLocationsListView?.Items.Add(item);
             }
 
-            StopKeysTextBox.Text = Helper.KeysToString(XMLSettings.soundboardSettings.StopSoundKeys);
-            ToggleKeysTextBox.Text = Helper.KeysToString(XMLSettings.soundboardSettings.EnableSoundboardKeys);
-
-            MinimizeToTrayCheckBox.Checked = XMLSettings.soundboardSettings.MinimizeToTray;
+            // Checking if there are any hotkeys mapped to specific actions.
+            ToggleKeysTextBox?.Text = Helper.KeysToString(CurrentSettings?.EnableSoundboardKeys);
+            StopKeysTextBox?.Text = Helper.KeysToString(CurrentSettings?.StopSoundKeys);
+            // Also checking if the minimize to tray function is enabled.
+            MinimizeToTrayCheckBox?.Checked = CurrentSettings is not null 
+                && CurrentSettings.MinimizeToTray.HasValue 
+                && CurrentSettings.MinimizeToTray.Value;
         }
 
-        private void AddButton_Click(object sender, EventArgs e)
+        /// Description
+        /// <summary>
+        ///     Event handler for the 'Click' event of <see cref="AddButton">AddButton</see>.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event.</param>
+        /// <param name="e">Arguments of the event.</param>
+        private void AddButton_Click(Object? sender, EventArgs e)
         {
-            addingEditingLoadXMLFile = true;
+            // Setting the flag to true, signaling that 
+            // we are currently editing the list of XML presets.
+            EditLoadXMLFile = true;
 
-            AddEditHotkeyForm form = new AddEditHotkeyForm();
+            // Initializing the new form of editing XML dynamically.
+            AddEditHotkeyForm form = new();
+            // Then creating a window of that form so the user can
+            // edit his presets through a modal dialog.
             form.ShowDialog();
 
-            addingEditingLoadXMLFile = false;
+            // Resetting the flag to false, indicating that
+            // we have finished editing the presets.
+            EditLoadXMLFile = false;
         }
 
-        private void EditButton_Click(object sender, EventArgs e)
+        /// Description
+        /// <summary>
+        ///     Event handler for the 'Click' event of <see cref="EditButton">EditButton</see>.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event.</param>
+        /// <param name="e">Arguments of the event.</param>
+        private void EditButton_Click(Object? sender, EventArgs e)
         {
-            if (KeysLocationsListView.SelectedIndices.Count > 0)
+            // Checking if there any selected entires of the list.
+            if (KeysLocationsListView?.SelectedIndices.Count > 0)
             {
-                addingEditingLoadXMLFile = true;
+                // Setting the flag to true, signaling that 
+                // we are currently editing the list of XML presets.
+                EditLoadXMLFile = true;
 
-                AddEditHotkeyForm form = new AddEditHotkeyForm();
+                // Initializing the new form of editing XML dynamically
+                // with parameters of the current entry that we are editing.
+                AddEditHotkeyForm form = new()
+                {
+                    EditIndex = KeysLocationsListView.SelectedIndices[0],
+                    EditStrings = [KeysLocationsListView.SelectedItems[0].Text, KeysLocationsListView.SelectedItems[0].SubItems[1].Text]
+                };
 
-                form.editIndex = KeysLocationsListView.SelectedIndices[0];
-                form.editStrings = [KeysLocationsListView.SelectedItems[0].Text, KeysLocationsListView.SelectedItems[0].SubItems[1].Text];
-
+                // Then create a window of that form so the user can
+                // edit his presets through a modal dialog.
                 form.ShowDialog();
 
-                addingEditingLoadXMLFile = false;
+                // Resetting the flag to false, indicating that
+                // we have finished editing the presets.
+                EditLoadXMLFile = false;
             }
         }
 
-        private void RemoveButton_Click(object sender, EventArgs e)
+        /// Descriptions
+        /// <summary>
+        ///     Event handler for the 'Click' event of <see cref="RemoveButton">RemoveButton</see>.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event.</param>
+        /// <param name="e">Arguments of the event.</param>
+        private void RemoveButton_Click(Object? sender, EventArgs e)
         {
-            if (KeysLocationsListView.SelectedIndices.Count > 0 && MessageBox.Show("Are you sure?", "Are you sure?", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            // Checking if there are any selected entries.
+            if (KeysLocationsListView?.SelectedIndices.Count > 0 
+            && MessageBox.Show("Are you sure?", "Deletion of XML preset", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
-                int index = KeysLocationsListView.SelectedIndices[0];
-
+                // Passing the index of the current selected entry.
+                Int32 index = KeysLocationsListView.SelectedIndices[0];
+                // Removing the item in both ListView and local List.
                 KeysLocationsListView.Items.RemoveAt(index);
-                loadXMLFilesList.RemoveAt(index);
+                LoadXMLFilesList?.RemoveAt(index);
             }
         }
         
-        private void OKButton_Click(object sender, EventArgs e)
+        /// Description
+        /// <summary>
+        ///     Event handler for the 'Click' event of <see cref="OKButton">OKButton</see>.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event.</param>
+        /// <param name="e">Arguments of the event.</param>
+        private void OKButton_Click(Object? sender, EventArgs e)
         {
-            Keys[] stopSoundKeysArr = null;
-            Keys[] enableSoundboardKeysArr = null;
+            // Initializing the array of keys for hotkeys to toggle the soundboard's on/off state.
+            List<Keys>? toggleKeysArr = [];
+            // Also initializing the array of keys for hotkeys to stop all sounds from playing.
+            List<Keys>? stopKeysArr = [];
+            // Creating a local variable for saving the error message.
+            String? error = String.Empty;
 
-            if (
-                (string.IsNullOrWhiteSpace(StopKeysTextBox.Text)
-                || Helper.KeysArrayFromString(StopKeysTextBox.Text, out stopSoundKeysArr, out string error))
-                &&
-                (string.IsNullOrWhiteSpace(ToggleKeysTextBox.Text)
-                || Helper.KeysArrayFromString(ToggleKeysTextBox.Text, out enableSoundboardKeysArr, out error)))
+            try
             {
-                if (loadXMLFilesList.Count == 0 || loadXMLFilesList.All(x => x.Keys.Length > 0 && !string.IsNullOrWhiteSpace(x.XMLLocation) && File.Exists(x.XMLLocation)))
+                // Checking if we are trying to load any keys, and if that's so,
+                // validating that there is a path and it does exist.
+                if (LoadXMLFilesList?.Count == 0 || (LoadXMLFilesList is not null && LoadXMLFilesList
+                    .All(x => x.Keys?.Count > 0 && !String.IsNullOrWhiteSpace(x.XMLLocation) && File.Exists(x.XMLLocation))))
                 {
-                    XMLSettings.soundboardSettings.EnableSoundboardKeys = (enableSoundboardKeysArr == null ? [] : enableSoundboardKeysArr);
+                    // Trying to get array of Keys, and if we encounter an error,
+                    // we throw an exception with the error specified.
+                    if (!Helper.KeysArrayFromString(StopKeysTextBox?.Text, out stopKeysArr, out error)
+                    || !Helper.KeysArrayFromString(ToggleKeysTextBox?.Text, out toggleKeysArr, out error))
+                        throw new ArgumentException("Keys mismatch");
+                    
+                    // Assigning values to the fields of settings.
+                    CurrentSettings.EnableSoundboardKeys = toggleKeysArr ?? [];
+                    CurrentSettings.StopSoundKeys = stopKeysArr ?? [];
+                    CurrentSettings.LoadXMLFiles = [.. LoadXMLFilesList];
+                    CurrentSettings.MinimizeToTray = MinimizeToTrayCheckBox?.Checked ?? false;
+                    
+                    // Calling the procedure to save changes.
+                    SaveSoundboardSettingsXML();
 
-                    XMLSettings.soundboardSettings.StopSoundKeys = (stopSoundKeysArr == null ? [] : stopSoundKeysArr);
-
-                    XMLSettings.soundboardSettings.LoadXMLFiles = loadXMLFilesList.ToArray();
-
-                    XMLSettings.soundboardSettings.MinimizeToTray = MinimizeToTrayCheckBox.Checked;
-
-                    XMLSettings.SaveSoundboardSettingsXML();
-
+                    // After we completed all the changes, close the form.
                     this.Close();
                 }
+                // If there are more than 0 presets and their paths are invalid,
+                // we show a message with explanation why can't we save current changes.
                 else MessageBox.Show("One or more entries either have no keys added, the location is empty, or the file the location points to does not exist");
             }
-            else if (error != "")
+            // If the exception came from trying to get array of Keys,
+            // we show a message box with exception's message 
+            // and message inside the 'error' variable.
+            catch (ArgumentException argEx)
             {
-                MessageBox.Show(error);
+                MessageBox.Show($"{argEx.Message}: {error}");
+            }
+            // Otherwise, we show a generic exception error message.
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Unknown exception has occured", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void btnCancel_Click(object sender, EventArgs e)
+        /// Description
+        /// <summary>
+        ///     Event handler for the 'Click' event of <see cref="CancelButton">CancelButton</see>.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event.</param>
+        /// <param name="e">Arguments of the event.</param>
+        private void CancelButton_Click(Object? sender, EventArgs e) 
+            => this.Close(); // Just closing the form.
+        
+        /// Description
+        /// <summary>
+        ///     Event handler for the 'Mouse Double-Click' event of <see cref="KeysLocationsListView">KeysLocationsListView</see>.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event.</param>
+        /// <param name="e">Arguments of the event for the mouse control events.</param>
+        private void KeysLocationsListView_MouseDoubleClick(Object? sender, MouseEventArgs e) 
+            => EditButton_Click(sender, e); // Rerouting to an event of "EditButton"
+
+        /// Description
+        /// <summary>
+        ///     Event handler for the 'Enter' event of <see cref="StopKeysTextBox">StopKeysTextBox</see>.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event.</param>
+        /// <param name="e">Arguments of the event.</param>
+        private void StopKeysTextBox_Enter(Object? sender, EventArgs e)
+            => MainTimer?.Enabled = true; // Enable the timer so we can read the keyboard inputs.
+
+        /// Description
+        /// <summary>
+        ///     Event handler for the 'Leave' event of <see cref="StopKeysTextBox">StopKeysTextBox</see>.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event.</param>
+        /// <param name="e">Arguments of the event.</param>
+        private void StopKeysTextBox_Leave(Object? sender, EventArgs e)
+            => MainTimer?.Enabled = false; // Disabling the timer so we don't try to read the inputs all the time.
+        
+        /// Description
+        /// <summary>
+        ///     Event handler for the 'Enter' event of <see cref="ToggleKeysTextBox">ToggleKeysTextBox</see>.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event.</param>
+        /// <param name="e">Arguments of the event.</param>
+        private void ToggleKeysTextBox_Enter(Object? sender, EventArgs e)
+            => MainTimer?.Enabled = true; // Enable the timer so we can read the keyboard inputs.
+        
+        /// Description
+        /// <summary>
+        ///     Event handler for the 'Leave' event of <see cref="ToggleKeysTextBox">ToggleKeysTextBox</see>.
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event.</param>
+        /// <param name="e">Arguments of the event.</param>
+        private void ToggleKeysTextBox_Leave(Object? sender, EventArgs e)
+            => MainTimer?.Enabled = false; // Disabling the timer so we don't try to read the inputs all the time.
+
+        /// Description
+        /// <summary>
+        ///     Event handler for the "Tick" event of <see cref="MainTimer">MainTimer</see> 
+        /// </summary>
+        /// 
+        /// Parameters
+        /// <param name="sender">Object that sent the event</param>
+        /// <param name="e">Arguments of the event.</param>
+        private void MainTimer_Tick(Object? sender, EventArgs e)
         {
-            this.Close();
-        }
+            // Initializing the counter of current amount of keys pressed at the moment. 
+            Int32 currentAmountPressed = 0;
+            // Get currently pressed keys on the keyboard into a List.
+            List<Keys> pressedKeys = Keyboard.GetPressedKeys();
 
-        private void lvKeysLocs_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            EditButton_Click(null, null);
-        }
-
-        private void StopKeysTextBox_Enter(object sender, EventArgs e)
-        {
-            MainTimer.Enabled = true;
-        }
-
-        private void StopKeysTextBox_Leave(object sender, EventArgs e)
-        {
-            MainTimer.Enabled = false;
-        }
-
-        private void ToggleKeysTextBox_Enter(object sender, EventArgs e)
-        {
-            MainTimer.Enabled = true;
-        }
-
-        private void ToggleKeysTextBox_Leave(object sender, EventArgs e)
-        {
-            MainTimer.Enabled = false;
-        }
-
-
-        int lastAmountPressed = 0;
-
-        private void MainTimer_Tick(object sender, EventArgs e)
-        {
-            int amountPressed = 0;
-
-            if (Keyboard.IsKeyDown(Keys.Escape))
+            // Checking if the user has pressed the 'Esc' key.
+            if (pressedKeys.Contains(Keys.Escape))
             {
-                lastAmountPressed = 50;
-
-                StopKeysTextBox.Text = "";
+                // Resetting the last amount.
+                LastAmountPressed = 0;
+                // Clearing the input.
+                StopKeysTextBox?.Text = String.Empty;
             }
             else
             {
-                List<Keys> pressedKeys = new List<Keys>();
-
-                foreach (Keys key in Enum.GetValues(typeof(Keys)))
+                // If the amount of keys pressed is greater than the last amount,
+                // we check the focus of textboxes, so we can determine where should
+                // we write the current pressed keys as hotkey sequence.
+                if (pressedKeys.Count > LastAmountPressed)
                 {
-                    if (Keyboard.IsKeyDown(key))
-                    {
-                        amountPressed++;
-                        pressedKeys.Add(key);
-                    }
+                    // If the StopKeysTextBoxes is in focus - then we write the current keys there.
+                    if (StopKeysTextBox is not null && StopKeysTextBox.Focused) 
+                        StopKeysTextBox.Text = Helper.KeysToString([.. pressedKeys]);
+                    // Same for the ToggleKeysTextBox.
+                    if (ToggleKeysTextBox is not null && ToggleKeysTextBox.Focused) 
+                        ToggleKeysTextBox.Text = Helper.KeysToString([.. pressedKeys]);
                 }
 
-                if (amountPressed > lastAmountPressed)
-                {
-                    if (StopKeysTextBox.Focused) StopKeysTextBox.Text = Helper.KeysToString(pressedKeys.ToArray());
-                    if (ToggleKeysTextBox.Focused) ToggleKeysTextBox.Text = Helper.KeysToString(pressedKeys.ToArray());
-                }
-
-                lastAmountPressed = amountPressed;
+                // Setting the amount of keys pressed to the current amount.
+                LastAmountPressed = currentAmountPressed;
             }
         }
     }

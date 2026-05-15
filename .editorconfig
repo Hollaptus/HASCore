@@ -1,0 +1,8 @@
+[*.{cs,vb}]
+
+# IDE0003: Remove qualification
+dotnet_diagnostic.IDE0003.severity = none
+# IDE0049: Simplify Names
+dotnet_diagnostic.IDE0049.severity = none
+# IDE0090: Use 'new(...)'
+dotnet_diagnostic.IDE0090.severity = warning

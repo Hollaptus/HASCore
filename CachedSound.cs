@@ -12,11 +12,11 @@ namespace JNSoundboardCore
 
         public CachedSound(string audioFileName)
         {
-            using (AudioFileReader audioFileReader = new AudioFileReader(audioFileName))
+            using (AudioFileReader audioFileReader = new(audioFileName))
             {
                 // TODO: could add resampling in here if required
                 WaveFormat = audioFileReader.WaveFormat;
-                List<float> wholeFile = new List<float>((int)(audioFileReader.Length / 4));
+                List<float> wholeFile = new((int)(audioFileReader.Length / 4));
                 var readBuffer = new float[audioFileReader.WaveFormat.SampleRate * audioFileReader.WaveFormat.Channels];
                 int samplesRead;
 

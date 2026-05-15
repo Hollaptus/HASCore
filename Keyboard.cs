@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+
 namespace JNSoundboardCore
 {
     public class Keyboard
@@ -61,10 +62,31 @@ namespace JNSoundboardCore
         [DllImport("user32.dll", SetLastError = true)]
         private static extern short GetKeyState(ushort virtualKeyCode);
 
+        [DllImport("user32.dll")]
+        private static extern bool GetKeyboardState(Byte[] lpKeyState);
+
         internal static bool IsKeyDown(Keys keyCode)
         {
             short keyState = GetKeyState((ushort)keyCode);
             return keyState < 0;
+        }
+
+        /// <summary>Returns the List of currently pressed keys.</summary>
+        public static List<Keys> GetPressedKeys()
+        {
+            Byte[] state = new Byte[256];
+            if (!GetKeyboardState(state))
+                return [];
+            
+            List<Keys> pressed = [];
+            for (int i = 0; i < 256; i++)
+            {
+                if ((state[i] & 0x80) != 0)  // MSB (Most Significant Bit) is set - the key is pressed
+                {
+                    pressed.Add((Keys)i);
+                }
+            }
+            return pressed;
         }
         
         [DllImport("user32.dll", SetLastError = true)]
@@ -78,7 +100,7 @@ namespace JNSoundboardCore
 
         const uint MAPVK_VK_TO_VSC = 0x00;
 
-        public static bool sendKey(Keys key, bool keyDown)
+        public static bool SendKey(Keys key, bool keyDown)
         {
             INPUT[] inputs =
             [

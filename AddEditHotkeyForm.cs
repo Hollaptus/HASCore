@@ -7,88 +7,88 @@ namespace JNSoundboardCore
     {
         internal class ListViewItemComparer : IComparer
         {
-            private int col;
+            private readonly Int32 Column;
 
             public ListViewItemComparer()
             {
-                col = 0;
+                Column = 0;
             }
 
-            public ListViewItemComparer(int column)
+            public ListViewItemComparer(Int32 column)
             {
-                col = column;
+                Column = column;
             }
 
-            public int Compare(object x, object y)
+            public Int32 Compare(Object? x, Object? y)
             {
-                return string.Compare(((ListViewItem)x).SubItems[col].Text, ((ListViewItem)y).SubItems[col].Text);
+                return x is not null && y is not null ? String.Compare(((ListViewItem)x).SubItems[Column].Text, ((ListViewItem)y).SubItems[Column].Text) : 0;
             }
         }
 
-        internal string[] editStrings = null;
-        internal int editIndex = -1;
-
-        MainForm mainForm;
-        SettingsForm settingsForm;
+        internal List<String>? EditStrings = null;
+        internal Int32 EditIndex = -1;
+        private Int32 lastAmountPressed = 0;
+        private MainForm? MainForm;
+        private SettingsForm? SettingsForm;
 
         public AddEditHotkeyForm()
         {
             InitializeComponent();
         }
 
-        private void AddEditSoundKeys_Load(object sender, EventArgs e)
+        private void AddEditSoundKeys_Load(Object sender, EventArgs e)
         {
-            if (SettingsForm.addingEditingLoadXMLFile)
+            if (SettingsForm.EditLoadXMLFile)
             {
                 //hide window restriction
                 gbWindowRestriction.Visible = false;
                 this.MinimumSize = new Size(375, 170);
                 this.Size = new Size(375, 170);
 
-                settingsForm = Application.OpenForms[1] as SettingsForm;
+                SettingsForm = Application.OpenForms[1] as SettingsForm;
 
                 this.Text = "Add/edit keys and XML location";
 
-                if (editIndex != -1)
+                if (EditIndex != -1)
                 {
-                    tbKeys.Text = editStrings[0];
-                    tbLocation.Text = editStrings[1];
+                    tbKeys.Text = EditStrings?[0];
+                    tbLocation.Text = EditStrings?[1];
                 }
             }
             else
             {
-                mainForm = Application.OpenForms[0] as MainForm;
+                MainForm = Application.OpenForms[0] as MainForm;
 
                 labelLoc.Text += " (use a semi-colon (;) to seperate multiple locations)";
 
-                loadWindows();
+                LoadWindows();
 
-                if (editIndex != -1)
+                if (EditIndex != -1)
                 {
-                    tbKeys.Text = editStrings[0];
+                    tbKeys.Text = EditStrings?[0];
 
-                    if (editStrings[1] != "")
+                    if (!String.IsNullOrEmpty(EditStrings?[1]))
                     {
                         cbEnableRestrictWindow.Checked = true;
 
-                        int index = cbWindows.Items.IndexOf(editStrings[1]);
+                        Int32 index = cbWindows.Items.IndexOf(EditStrings?[1]);
 
                         if (index != -1) cbWindows.SelectedIndex = index;
                         else
                         {
-                            cbWindows.Items.Add(editStrings[1]);
+                            cbWindows.Items.Add(EditStrings?[1]!);
                             cbWindows.SelectedIndex = cbWindows.Items.Count - 1;
                         }
                     }
 
-                    tbLocation.Text = editStrings[2];
+                    tbLocation.Text = EditStrings?[2];
                 }
 
                 
             }
         }
 
-        private void loadWindows()
+        private void LoadWindows()
         {
             cbWindows.Items.Clear();
 
@@ -98,102 +98,98 @@ namespace JNSoundboardCore
 
             foreach (Process process in processlist)
             {
-                if (!string.IsNullOrEmpty(process.MainWindowTitle))
+                if (!String.IsNullOrEmpty(process.MainWindowTitle))
                 {
                     cbWindows.Items.Add(process.MainWindowTitle);
                 }
             }
         }
 
-        private void btnOK_Click(object sender, EventArgs e)
+        private void OKButton_Click(Object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(tbLocation.Text))
+            if (String.IsNullOrWhiteSpace(tbLocation.Text))
             {
                 MessageBox.Show("Location is empty");
                 return;
             }
 
-            if (SettingsForm.addingEditingLoadXMLFile && string.IsNullOrWhiteSpace(tbKeys.Text))
+            if (SettingsForm.EditLoadXMLFile && String.IsNullOrWhiteSpace(tbKeys.Text))
             {
                 MessageBox.Show("No keys entered");
                 return;
             }
 
-            string[] soundLocs = null;
-            string errorMessage = "";
+            List<String>? soundLocations = null;
+            String? errorMessage = String.Empty;
 
-            if (!SettingsForm.addingEditingLoadXMLFile)
+            if (!SettingsForm.EditLoadXMLFile && Helper.SoundLocsArrayFromString(tbLocation.Text, out soundLocations, out errorMessage))
             {
-                if (!SettingsForm.addingEditingLoadXMLFile && Helper.SoundLocsArrayFromString(tbLocation.Text, out soundLocs, out errorMessage))
+                if (soundLocations is not null && soundLocations.Any(x => String.IsNullOrWhiteSpace(x) || !File.Exists(x)))
                 {
-                    if (soundLocs.Any(x => string.IsNullOrWhiteSpace(x) || !File.Exists(x)))
-                    {
-                        MessageBox.Show("The file/one of the files does not exist");
+                    MessageBox.Show("The file/one of the files does not exist");
 
-                        this.Close();
+                    this.Close();
 
-                        return;
-                    }
+                    return;
                 }
 
-                if (soundLocs == null)
+                if (soundLocations == null)
                 {
                     MessageBox.Show(errorMessage);
                     return;
                 }
             }
 
+            if (!Helper.KeysArrayFromString(tbKeys.Text, out List<Keys>? keysList, out errorMessage)) keysList = [];
 
-            if (!Helper.KeysArrayFromString(tbKeys.Text, out Keys[] keysArr, out errorMessage)) keysArr = [];
-
-            if (SettingsForm.addingEditingLoadXMLFile)
+            if (SettingsForm.EditLoadXMLFile)
             {
-                if (editIndex != -1)
+                if (EditIndex != -1)
                 {
-                    settingsForm.KeysLocationsListView.Items[editIndex].Text = tbKeys.Text;
-                    settingsForm.KeysLocationsListView.Items[editIndex].SubItems[1].Text = tbLocation.Text;
+                    SettingsForm?.KeysLocationsListView?.Items[EditIndex].Text = tbKeys.Text;
+                    SettingsForm?.KeysLocationsListView?.Items[EditIndex].SubItems[1].Text = tbLocation.Text;
 
-                    settingsForm.loadXMLFilesList[editIndex].Keys = keysArr;
-                    settingsForm.loadXMLFilesList[editIndex].XMLLocation = tbLocation.Text;
+                    SettingsForm?.LoadXMLFilesList?[EditIndex].Keys = keysList;
+                    SettingsForm?.LoadXMLFilesList?[EditIndex].XMLLocation = tbLocation.Text;
                 }
                 else
                 {
-                    ListViewItem item = new ListViewItem(tbKeys.Text);
+                    ListViewItem item = new(tbKeys.Text);
                     item.SubItems.Add(tbLocation.Text);
 
-                    settingsForm.KeysLocationsListView.Items.Add(item);
+                    SettingsForm?.KeysLocationsListView?.Items.Add(item);
 
-                    settingsForm.loadXMLFilesList.Add(new XMLSettings.LoadXMLFile(keysArr, tbLocation.Text));
+                    SettingsForm?.LoadXMLFilesList?.Add(new XMLSettings.LoadXMLFile(keysList!, tbLocation.Text));
                 }
             }
             else
             {
-                string windowText = "";
-                if (cbEnableRestrictWindow.Checked && (string)cbWindows.SelectedItem != "") windowText = (string)cbWindows.SelectedItem;
+                String? windowText = String.Empty;
+                if (cbEnableRestrictWindow.Checked && !String.IsNullOrEmpty(cbWindows.SelectedItem as String)) windowText = cbWindows.SelectedItem as String;
 
-                if (editIndex > -1)
+                if (EditIndex > -1)
                 {
-                    mainForm.lvKeySounds.Items[editIndex].Text = tbKeys.Text;
-                    mainForm.lvKeySounds.Items[editIndex].SubItems[1].Text = windowText;
-                    mainForm.lvKeySounds.Items[editIndex].SubItems[2].Text = tbLocation.Text;
+                    MainForm?.KeySoundsListView?.Items[EditIndex].Text = tbKeys.Text;
+                    MainForm?.KeySoundsListView?.Items[EditIndex].SubItems[1].Text = windowText;
+                    MainForm?.KeySoundsListView?.Items[EditIndex].SubItems[2].Text = tbLocation.Text;
 
-                    mainForm.soundHotkeys[editIndex] = new XMLSettings.SoundHotkey(keysArr, windowText, soundLocs);
+                    MainForm?.SoundHotkeys[EditIndex] = new XMLSettings.SoundHotkey(keysList!, windowText!, soundLocations!);
                 }
                 else
                 {
-                    ListViewItem newItem = new ListViewItem(tbKeys.Text);
+                    ListViewItem newItem = new(tbKeys.Text);
                     newItem.SubItems.Add(windowText);
                     newItem.SubItems.Add(tbLocation.Text);
 
-                    mainForm.lvKeySounds.Items.Add(newItem);
+                    MainForm?.KeySoundsListView?.Items.Add(newItem);
 
-                    mainForm.soundHotkeys.Add(new XMLSettings.SoundHotkey(keysArr, windowText, soundLocs));
+                    MainForm?.SoundHotkeys.Add(new XMLSettings.SoundHotkey(keysList!, windowText!, soundLocations!));
                 }
 
-                mainForm.lvKeySounds.ListViewItemSorter = new ListViewItemComparer(0);
-                mainForm.lvKeySounds.Sort();
+                MainForm?.KeySoundsListView?.ListViewItemSorter = new ListViewItemComparer(0);
+                MainForm?.KeySoundsListView?.Sort();
 
-                mainForm.soundHotkeys.Sort(delegate (XMLSettings.SoundHotkey x, XMLSettings.SoundHotkey y)
+                MainForm?.SoundHotkeys.Sort(delegate (XMLSettings.SoundHotkey x, XMLSettings.SoundHotkey y)
                 {
                     if (x.Keys == null && y.Keys == null) return 0;
                     else if (x.Keys == null) return -1;
@@ -201,70 +197,57 @@ namespace JNSoundboardCore
                     else return Helper.KeysToString(x.Keys).CompareTo(Helper.KeysToString(y.Keys));
                 });
 
-                mainForm.chKeys.Width = -2;
-                mainForm.chSoundLoc.Width = -2;
+                MainForm?.KeysColumnHeader?.Width = -2;
+                MainForm?.SoundLocationColumnHeader?.Width = -2;
             }
 
             this.Close();
         }
 
-        private void btnCancel_Click(object sender, EventArgs e)
+        private void CancelButton_Click(Object sender, EventArgs e)
         {
             this.Close();
         }
 
-        private void btnBrowseSoundLoc_Click(object sender, EventArgs e)
+        private void BrowseSoundLocationButton_Click(Object sender, EventArgs e)
         {
-            OpenFileDialog diag = new OpenFileDialog();
-
-            diag.Multiselect = !SettingsForm.addingEditingLoadXMLFile;
-
-            diag.Filter = (SettingsForm.addingEditingLoadXMLFile ? "XML file containing keys and sounds|*.xml" : "Supported audio formats|*.mp3;*.m4a;*.wav;*.wma;*.ac3;*.aiff;*.mp2|All files|*.*");
-
-            DialogResult result = diag.ShowDialog();
-
-            if (result == DialogResult.OK)
+            OpenFileDialog diag = new()
             {
-                string text = "";
+                Multiselect = !SettingsForm.EditLoadXMLFile,
+                Filter = SettingsForm.EditLoadXMLFile ? "XML file containing keys and sounds|*.xml" : "Supported audio formats|*.mp3;*.m4a;*.wav;*.wma;*.ac3;*.aiff;*.mp2|All files|*.*"
+            };
 
-                for (int i = 0; i < diag.FileNames.Length; i++)
+            if (diag.ShowDialog() == DialogResult.OK)
+            {
+                String text = String.Empty;
+
+                for (Int32 i = 0; i < diag.FileNames.Length; i++)
                 {
-                    string fileName = diag.FileNames[i];
-
+                    String fileName = diag.FileNames[i];
                     if (fileName != "") text += (i == 0 ? "" : ";") + fileName;
                 }
-
                 tbLocation.Text = text;
             }
         }
 
-        private void tbKeys_Enter(object sender, EventArgs e)
-        {
-            timer1.Enabled = true;
-        }
+        private void KeysTextBox_Enter(Object sender, EventArgs e) => timer1.Enabled = true;
+        
+        private void KeysTextBox_Leave(Object sender, EventArgs e) => timer1.Enabled = false;
 
-        private void tbKeys_Leave(object sender, EventArgs e)
+        private void MainTimer_Tick(Object sender, EventArgs e)
         {
-            timer1.Enabled = false;
-        }
-
-        int lastAmountPressed = 0;
-
-        private void timer1_Tick(object sender, EventArgs e)
-        {
-            int amountPressed = 0;
+            Int32 amountPressed = 0;
 
             if (Keyboard.IsKeyDown(Keys.Escape))
             {
                 lastAmountPressed = 50;
-
                 tbKeys.Text = ""; 
             }
             else
             {
-                List<Keys> pressedKeys = new List<Keys>();
+                List<Keys> pressedKeys = [];
 
-                foreach (Keys key in Enum.GetValues(typeof(Keys)))
+                foreach (Keys key in Enum.GetValues<Keys>())
                 {
                     if (Keyboard.IsKeyDown(key))
                     {
@@ -274,23 +257,21 @@ namespace JNSoundboardCore
                 }
 
                 if (amountPressed > lastAmountPressed)
-                {
-                    tbKeys.Text = Helper.KeysToString(pressedKeys.ToArray());
-                }
+                    tbKeys.Text = Helper.KeysToString(pressedKeys);
 
                 lastAmountPressed = amountPressed;
             }
         }
 
-        private void cbEnableRestrictWindow_CheckedChanged(object sender, EventArgs e)
+        private void EnableRestrictWindowCheckBox_CheckedChanged(Object sender, EventArgs e)
         {
             cbWindows.Enabled = cbEnableRestrictWindow.Checked;
             btnReloadWindows.Enabled = cbEnableRestrictWindow.Checked;
         }
 
-        private void btnReloadWindows_Click(object sender, EventArgs e)
+        private void ReloadWindowsButton_Click(Object sender, EventArgs e)
         {
-            loadWindows();
+            LoadWindows();
         }
     }
 }

@@ -71,7 +71,7 @@ namespace JNSoundboardCore
             this.btnClose.TabIndex = 5;
             this.btnClose.Text = "Close";
             this.btnClose.UseVisualStyleBackColor = true;
-            this.btnClose.Click += new EventHandler(this.btnClose_Click);
+            this.btnClose.Click += new EventHandler(this.CloseButton_Click);
             // 
             // tbKeys
             // 
@@ -82,8 +82,8 @@ namespace JNSoundboardCore
             this.tbKeys.ReadOnly = true;
             this.tbKeys.Size = new Size(235, 20);
             this.tbKeys.TabIndex = 3;
-            this.tbKeys.Enter += new EventHandler(this.tbKeys_Enter);
-            this.tbKeys.Leave += new EventHandler(this.tbKeys_Leave);
+            this.tbKeys.Enter += new EventHandler(this.KeysTextBox_Enter);
+            this.tbKeys.Leave += new EventHandler(this.KeysTextBox_Leave);
             // 
             // label2
             // 
@@ -123,7 +123,7 @@ namespace JNSoundboardCore
             this.btnBrowseFolderLoc.TabIndex = 2;
             this.btnBrowseFolderLoc.Text = "...";
             this.btnBrowseFolderLoc.UseVisualStyleBackColor = true;
-            this.btnBrowseFolderLoc.Click += new EventHandler(this.btnBrowseFolderLoc_Click);
+            this.btnBrowseFolderLoc.Click += new EventHandler(this.BrowseFolderLocationButton_Click);
             // 
             // btnCreateWAV
             // 
@@ -134,7 +134,7 @@ namespace JNSoundboardCore
             this.btnCreateWAV.TabIndex = 12;
             this.btnCreateWAV.Text = "Only create WAV";
             this.btnCreateWAV.UseVisualStyleBackColor = true;
-            this.btnCreateWAV.Click += new EventHandler(this.btnCreateWAV_Click);
+            this.btnCreateWAV.Click += new EventHandler(this.CreateWAVButton_Click);
             // 
             // btnCreateWAVAdd
             // 
@@ -145,11 +145,11 @@ namespace JNSoundboardCore
             this.btnCreateWAVAdd.TabIndex = 4;
             this.btnCreateWAVAdd.Text = "Create WAV and add to list";
             this.btnCreateWAVAdd.UseVisualStyleBackColor = true;
-            this.btnCreateWAVAdd.Click += new EventHandler(this.btnCreateWAVAdd_Click);
+            this.btnCreateWAVAdd.Click += new EventHandler(this.CreateWAVAddButton_Click);
             // 
             // timer1
             // 
-            this.timer1.Tick += new EventHandler(this.timer1_Tick);
+            this.timer1.Tick += new EventHandler(this.MainTimer_Tick);
             // 
             // TextToSpeechForm
             // 
