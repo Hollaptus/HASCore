@@ -5,52 +5,53 @@ namespace JNSoundboardCore
 {
     class AudioPlaybackEngine : IDisposable
     {
-        public static readonly AudioPlaybackEngine Instance = new AudioPlaybackEngine(44100, 2);
+        public static readonly AudioPlaybackEngine Instance = new(44100, 2);
 
-        private IWavePlayer outputDevice;
-        private readonly MixingSampleProvider mixer;
-        private IDictionary<string, CachedSound> cachedSounds = new Dictionary<string, CachedSound>();
+        // private IWavePlayer OutputDevice;
+        private WaveOutEvent? OutputDevice;
+        private readonly MixingSampleProvider Mixer;
+        private readonly Dictionary<String, CachedSound> CachedSounds = [];
+        public event EventHandler? AllInputEnded;
 
-        public AudioPlaybackEngine(int sampleRate = 44100, int channelCount = 2)
+        public AudioPlaybackEngine(Int32 sampleRate = 44100, Int32 channelCount = 2)
         {
-            mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, channelCount));
-            mixer.ReadFully = true;
-            mixer.MixerInputEnded += OnMixerInputEnded;
+            Mixer = new(WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, channelCount))
+            {
+                ReadFully = true
+            };
+            Mixer.MixerInputEnded += OnMixerInputEnded;
         }
 
-        public event EventHandler AllInputEnded;
 
-        private void OnMixerInputEnded(object sender, SampleProviderEventArgs e)
+        private void OnMixerInputEnded(Object? sender, SampleProviderEventArgs e)
         {
             // check if there are any inputs left
             // OnMixerInputEnded gets invoked before the corresponding source is removed from the List so there should be exactly one source left
-            if (mixer.MixerInputs.Count() == 1)
-            {
+            if (Mixer.MixerInputs.Count() == 1)
                 AllInputEnded?.Invoke(this, EventArgs.Empty);
-            }
         }
 
-        public void Init(int deviceNumber)
+        public void Init(Int32 deviceNumber)
         {
-            if (outputDevice != null) outputDevice.Dispose();
+            OutputDevice?.Dispose();
 
-            WaveOutEvent output = new WaveOutEvent();
-            output.DeviceNumber = deviceNumber;
-            output.Init(mixer);
+            WaveOutEvent output = new()
+            {
+                DeviceNumber = deviceNumber
+            };
+            output.Init(Mixer);
             output.Play();
 
-            outputDevice = output;
+            OutputDevice = output;
         }
 
-        public void PlaySound(string fileName)
+        public void PlaySound(String fileName)
         {
-            AudioFileReader input = new AudioFileReader(fileName);
-
-
-            if (!cachedSounds.TryGetValue(fileName, out CachedSound cachedSound))
+            // AudioFileReader input = new AudioFileReader(fileName);
+            if (!CachedSounds.TryGetValue(fileName, out CachedSound? cachedSound))
             {
                 cachedSound = new CachedSound(fileName);
-                cachedSounds.Add(fileName, cachedSound);
+                CachedSounds.Add(fileName, cachedSound);
             }
 
             PlaySound(cachedSound);
@@ -63,37 +64,30 @@ namespace JNSoundboardCore
 
         public void StopAllSounds()
         {
-            mixer.RemoveAllMixerInputs();
+            Mixer.RemoveAllMixerInputs();
         }
 
         private ISampleProvider ConvertToRightChannelCount(ISampleProvider input)
         {
-            if (input.WaveFormat.Channels == mixer.WaveFormat.Channels)
-            {
+            if (input.WaveFormat.Channels == Mixer.WaveFormat.Channels)
                 return input;
-            }
-
-            if (input.WaveFormat.Channels == 1 && mixer.WaveFormat.Channels == 2)
-            {
+            
+            if (input.WaveFormat.Channels == 1 && Mixer.WaveFormat.Channels == 2)
                 return new MonoToStereoSampleProvider(input);
-            }
-
+            
             throw new NotImplementedException("Not yet implemented this channel count conversion");
         }
 
         private void AddMixerInput(ISampleProvider input)
         {
-            WdlResamplingSampleProvider resampled = new WdlResamplingSampleProvider(input, mixer.WaveFormat.SampleRate);
-            mixer.AddMixerInput(ConvertToRightChannelCount(resampled));
+            WdlResamplingSampleProvider resampled = new(input, Mixer.WaveFormat.SampleRate);
+            Mixer.AddMixerInput(ConvertToRightChannelCount(resampled));
         }
 
         public void Dispose()
         {
-            if (outputDevice != null)
-            {
-                outputDevice.Dispose();
-                outputDevice = null;
-            }
+            OutputDevice?.Dispose();
+            OutputDevice = null;
         }
     }
 }

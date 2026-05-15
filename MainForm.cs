@@ -1,195 +1,256 @@
 ﻿using System.Media;
-using NAudio.Wave;
 using System.Diagnostics;
+using NAudio.Wave;
+// Declaring the using statement so we don't have to always prepend
+// 'XMLSettings' to an already static fields of the class.
+using static JNSoundboardCore.XMLSettings;
 
 namespace JNSoundboardCore
 {
+    /// Description
+    /// <summary>
+    ///     <see cref="MainForm"/> class part for initializing the Object and its event handlers.
+    /// </summary>
     public partial class MainForm : Form
     {
-        WaveIn loopbackSourceStream = null;
-        BufferedWaveProvider loopbackWaveProvider = null;
-        WaveOut loopbackWaveOut = null;
+        private WaveIn? LoopbackSourceStream = null;
+        private BufferedWaveProvider? LoopbackWaveProvider = null;
+        private WaveOut? LoopbackWaveOut = null;
+        private readonly Random Rand = new();
 
-        Random rand = new Random();
+        private Boolean KeyUpPushToTalkKey = false;
+        private Keys PushToTalkKey;
+        private List<Keys>? KeysJustPressed = null;
+        private Boolean ShowMsgBox = false;
+        private Int32 LastIndex = -1;
 
-        bool keyUpPushToTalkKey = false;
+        internal List<SoundHotkey> SoundHotkeys = [];
 
-        internal List<XMLSettings.SoundHotkey> soundHotkeys = new List<XMLSettings.SoundHotkey>();
-        Keys pushToTalkKey;
+        internal String XMLLocation = String.Empty;
 
-        internal string xmlLoc = "";
-
+        /// Description
+        /// <summary>
+        ///     <see cref="MainForm"/> constructor for initialization of class properties.
+        /// </summary>
         public MainForm()
         {
+            // Calling initialization procedure from another part of the class.
             InitializeComponent();
 
-            ToolTip tooltip = new ToolTip();
-            tooltip.SetToolTip(btnReloadDevices, "Refresh sound devices");
-            tooltip.SetToolTip(btnReloadWindows, "Reload windows");
+            // Dynamically creating the ToolTip object for displaying
+            // tooltips for certain controls
+            ToolTip tooltip = new();
+            // Because we have already called the InitializeComponent procedure,
+            // these buttons shouldn't be null, but we'll still check just in case
+            if (ReloadDevicesButton is not null)
+                tooltip.SetToolTip(ReloadDevicesButton, "Refresh sound devices");
+            if (ReloadWindowsButton is not null)
+                tooltip.SetToolTip(ReloadWindowsButton, "Reload windows");
 
-            loadSoundDevices();
-            loadWindows();
+            // Calling procedures to populate controls with relevant information
+            // For PlaybackDevicesComboBox and LoopbackDevicesComboBox:
+            LoadSoundDevices();
+            // For WindowsComboBox:
+            LoadWindows();
+            // For KeySoundsListView:
+            LoadSoundboardSettingsXML();
 
-            XMLSettings.LoadSoundboardSettingsXML();
+            // Also checking if the devices haven't changed since last launch: 
+            if (PlaybackDevicesComboBox is not null && PlaybackDevicesComboBox.Items.Contains(CurrentSettings.LastPlaybackDevice))
+            {
+                // We select the item that has been as default playback device last time
+                PlaybackDevicesComboBox.SelectedItem = CurrentSettings.LastPlaybackDevice;
+                // Also adding the event handler for changes in the index of selected item in the combobox
+                PlaybackDevicesComboBox.SelectedIndexChanged += PlaybackDevicesComboBox_SelectedIndexChanged;
+            }
+            if (LoopbackDevicesComboBox is not null && LoopbackDevicesComboBox.Items.Contains(CurrentSettings.LastLoopbackDevice)) 
+            {
+                LoopbackDevicesComboBox.SelectedItem = CurrentSettings.LastLoopbackDevice;
+                LoopbackDevicesComboBox.SelectedIndexChanged += LoopbackDevicesComboBox_SelectedIndexChanged;
+            }
 
-            if (cbPlaybackDevices.Items.Contains(XMLSettings.soundboardSettings.LastPlaybackDevice)) cbPlaybackDevices.SelectedItem = XMLSettings.soundboardSettings.LastPlaybackDevice;
+            // After all the settings have been loaded, 
+            // we start initializing the engine for audio playback
+            InitAudioPlaybackEngine();
 
-            if (cbLoopbackDevices.Items.Contains(XMLSettings.soundboardSettings.LastLoopbackDevice)) cbLoopbackDevices.SelectedItem = XMLSettings.soundboardSettings.LastLoopbackDevice;
-
-            //add events after settings have been loaded
-            cbPlaybackDevices.SelectedIndexChanged += cbPlaybackDevices_SelectedIndexChanged;
-            cbLoopbackDevices.SelectedIndexChanged += cbLoopbackDevices_SelectedIndexChanged;
-
-            initAudioPlaybackEngine();
-
+            // Also adding the event handler after input has ended
+            // for 'Push to talk' functionality
             AudioPlaybackEngine.Instance.AllInputEnded += OnAllInputEnded;
         }
 
-        private void OnAllInputEnded(object sender, EventArgs e)
+        private void OnAllInputEnded(Object? sender, EventArgs? e)
         {
-            if (keyUpPushToTalkKey)
+            if (KeyUpPushToTalkKey)
             {
-                keyUpPushToTalkKey = false;
-                Keyboard.sendKey(pushToTalkKey, false);
+                KeyUpPushToTalkKey = false;
+                Keyboard.SendKey(PushToTalkKey, false);
             }
         }
 
-        private void initAudioPlaybackEngine()
+        private void InitAudioPlaybackEngine()
         {
-            int deviceNumber = cbPlaybackDevices.SelectedIndex;
-
             try
             {
-                AudioPlaybackEngine.Instance.Init(deviceNumber);
+                if (PlaybackDevicesComboBox?.SelectedIndex is not null)
+                    AudioPlaybackEngine.Instance.Init(PlaybackDevicesComboBox.SelectedIndex);
+                else throw new NullReferenceException("No audio device has been selected");
             }
-            catch (NAudio.MmException ex)
+            catch (Exception ex)
             {
                 SystemSounds.Beep.Play();
-                string msg = ex.ToString();
+                String msg = ex.ToString();
                 if (msg.Contains("AlreadyAllocated calling waveOutOpen")) {
                     msg = "Failed to open device. Already in exclusive use by another application? \n\n" + msg;
                 }
-                MessageBox.Show(msg);
+                MessageBox.Show($"Initialization of audio engine has failed: {msg}");
             }
         }
 
-        private void loadWindows()
-        {
-            cbWindows.Items.Clear();
-
-            cbWindows.Items.Add("[Any window]");
-
-            cbWindows.SelectedIndex = 0;
-
-            Process[] processlist = Process.GetProcesses();
-
-            foreach (Process process in processlist)
-            {
-                if (!string.IsNullOrEmpty(process.MainWindowTitle))
-                {
-                    cbWindows.Items.Add(process.MainWindowTitle);
-                }
-            }
-        }
-
-        private void loadSoundDevices()
-        {
-            List<WaveOutCapabilities> playbackSources = new List<WaveOutCapabilities>();
-            List<WaveInCapabilities> loopbackSources = new List<WaveInCapabilities>();
-
-            for (int i = 0; i < WaveOut.DeviceCount; i++)
-            {
-                playbackSources.Add(WaveOut.GetCapabilities(i));
-            }
-
-            for (int i = 0; i < WaveIn.DeviceCount; i++)
-            {
-                loopbackSources.Add(WaveIn.GetCapabilities(i));
-            }
-
-            cbPlaybackDevices.Items.Clear();
-            cbLoopbackDevices.Items.Clear();
-
-            foreach (WaveOutCapabilities source in playbackSources)
-            {
-                cbPlaybackDevices.Items.Add(source.ProductName);
-            }
-
-            if (cbPlaybackDevices.Items.Count > 0)
-                cbPlaybackDevices.SelectedIndex = 0;
-
-            cbLoopbackDevices.Items.Add("");
-
-            foreach (WaveInCapabilities source in loopbackSources)
-            {
-                cbLoopbackDevices.Items.Add(source.ProductName);
-            }
-
-            cbLoopbackDevices.SelectedIndex = 0;
-        }
-
-        private void startLoopback()
-        {
-            stopLoopback();
-
-            int deviceNumber = cbLoopbackDevices.SelectedIndex - 1;
-
-            if (loopbackSourceStream == null)
-                loopbackSourceStream = new WaveIn();
-            loopbackSourceStream.DeviceNumber = deviceNumber;
-            loopbackSourceStream.WaveFormat = new WaveFormat(44100, WaveIn.GetCapabilities(deviceNumber).Channels);
-            loopbackSourceStream.BufferMilliseconds = 25;
-            loopbackSourceStream.NumberOfBuffers = 5;
-            loopbackSourceStream.DataAvailable += loopbackSourceStream_DataAvailable;
-
-            loopbackWaveProvider = new BufferedWaveProvider(loopbackSourceStream.WaveFormat);
-            loopbackWaveProvider.DiscardOnBufferOverflow = true;
-
-            if (loopbackWaveOut == null)
-                loopbackWaveOut = new WaveOut();
-            loopbackWaveOut.DeviceNumber = cbPlaybackDevices.SelectedIndex;
-            loopbackWaveOut.DesiredLatency = 125;
-            loopbackWaveOut.Init(loopbackWaveProvider);
-
-            loopbackSourceStream.StartRecording();
-            loopbackWaveOut.Play();
-        }
-
-        private void stopLoopback()
+        private void LoadWindows()
         {
             try
             {
-                if (loopbackWaveOut != null)
+                // We are checking if the combobox has been initialized just in case,
+                // the controls should be initialized by now
+                if (WindowsComboBox is not null)
                 {
-                    loopbackWaveOut.Stop();
-                    loopbackWaveOut.Dispose();
-                    loopbackWaveOut = null;
-                }
+                    // Clearing the items and adding the 'Any window' option
+                    WindowsComboBox.Items.Clear();
+                    WindowsComboBox.Items.Add("[Any window]");
+                    WindowsComboBox.SelectedIndex = 0;
 
-                if (loopbackWaveProvider != null)
-                {
-                    loopbackWaveProvider.ClearBuffer();
-                    loopbackWaveProvider = null;
+                    // Getting all the processes currently running and adding to the list
+                    foreach (Process process in Process.GetProcesses())
+                        if (!String.IsNullOrEmpty(process.MainWindowTitle))
+                            WindowsComboBox.Items.Add(process.MainWindowTitle);
                 }
-
-                if (loopbackSourceStream != null)
-                {
-                    loopbackSourceStream.StopRecording();
-                    loopbackSourceStream.Dispose();
-                    loopbackSourceStream = null;
-                }
+                else throw new NullReferenceException("Windows list hasn't been initialized");
             }
-            catch (Exception) { }
+            catch (Exception ex)
+            {
+                SystemSounds.Beep.Play();
+                String msg = ex.ToString();
+                MessageBox.Show($"Initialization of windows list has failed: {msg}");
+            }
         }
 
-        private void stopPlayback()
+        private void LoadSoundDevices()
         {
-            AudioPlaybackEngine.Instance.StopAllSounds();
+            try
+            {
+                // We are checking if the comboboxes have been initialized just in case,
+                // the controls should be initialized by now
+                if (PlaybackDevicesComboBox?.Items is not null && LoopbackDevicesComboBox?.Items is not null)
+                {
+                    List<WaveOutCapabilities> playbackSources = [];
+                    List<WaveInCapabilities> loopbackSources = [];
+                    
+                    // Iterating through audio devices and 
+                    // adding them to their respective lists
+                    for (Int32 i = 0; i < WaveOut.DeviceCount; i++)
+                        playbackSources.Add(WaveOut.GetCapabilities(i));
+
+                    for (Int32 i = 0; i < WaveIn.DeviceCount; i++)
+                        loopbackSources.Add(WaveIn.GetCapabilities(i));
+                    
+                    // Clearing the list of items inside the comboboxes
+                    PlaybackDevicesComboBox.Items.Clear();
+                    LoopbackDevicesComboBox.Items.Clear();
+
+                    // Adding the playback devices from audio devices capabilities list
+                    foreach (WaveOutCapabilities source in playbackSources)
+                        PlaybackDevicesComboBox.Items.Add(source.ProductName);
+                    
+                    // Setting the index if there are any items
+                    if (PlaybackDevicesComboBox.Items.Count > 0)
+                        PlaybackDevicesComboBox.SelectedIndex = 0;
+                    // And adding an empty entry
+                    LoopbackDevicesComboBox.Items.Add(String.Empty);
+
+                    // Doing the same for loopback devices
+                    foreach (WaveInCapabilities source in loopbackSources)
+                        LoopbackDevicesComboBox.Items.Add(source.ProductName);
+
+                    LoopbackDevicesComboBox.SelectedIndex = 0;
+                }
+                else throw new NullReferenceException("Lists haven't been initialized");
+            }
+            catch (Exception ex)
+            {
+                SystemSounds.Beep.Play();
+                String msg = ex.ToString();
+                MessageBox.Show($"Initialization of audio devices lists has failed: {msg}");
+            }
         }
 
-        private void playSound(string file)
+        private void StartLoopback()
         {
-            stopPlayback();
+            try
+            {
+                // Stopping loopback if it is used right now
+                StopLoopback();
+                // We are checking if the combobox has been initialized just in case,
+                // the controls should be initialized by now
+                if (LoopbackDevicesComboBox is not null)
+                {
+                    Int32 deviceNumber = LoopbackDevicesComboBox.SelectedIndex - 1;
+
+                    // Setting the parameters of the loopback stream
+                    LoopbackSourceStream ??= new WaveIn();
+                    LoopbackSourceStream.DeviceNumber = deviceNumber;
+                    LoopbackSourceStream.WaveFormat = new WaveFormat(44100, WaveIn.GetCapabilities(deviceNumber).Channels);
+                    LoopbackSourceStream.BufferMilliseconds = 25;
+                    LoopbackSourceStream.NumberOfBuffers = 5;
+                    LoopbackSourceStream.DataAvailable += LoopbackSourceStream_DataAvailable;
+                    // Setting the parameters of the provider
+                    LoopbackWaveProvider = new BufferedWaveProvider(LoopbackSourceStream.WaveFormat)
+                    {
+                        DiscardOnBufferOverflow = true
+                    };
+                    // Setting the parameters of the output
+                    LoopbackWaveOut ??= new WaveOut();
+                    LoopbackWaveOut.DeviceNumber = LoopbackDevicesComboBox.SelectedIndex;
+                    LoopbackWaveOut.DesiredLatency = 125;
+                    // Initialize output based on the provider
+                    LoopbackWaveOut.Init(LoopbackWaveProvider);
+                    // Record what is gonna be looped backed
+                    LoopbackSourceStream.StartRecording();
+                    // Play it out on the output
+                    LoopbackWaveOut.Play();
+                }
+                else throw new NullReferenceException("Loopback devices list hasn't been initialized");
+            }
+            catch (Exception ex)
+            {
+                SystemSounds.Beep.Play();
+                String msg = ex.ToString();
+                MessageBox.Show($"Initialization of loopback devices has failed: {msg}");
+            }
+        }
+
+        private void StopLoopback()
+        {
+            try
+            {
+                // Clearing resources
+                LoopbackWaveOut?.Stop();
+                LoopbackWaveOut?.Dispose();
+                LoopbackWaveProvider?.ClearBuffer();
+                LoopbackSourceStream?.StopRecording();
+                LoopbackSourceStream?.Dispose();
+                // Setting the values of objects to null reference
+                LoopbackWaveOut = null;
+                LoopbackWaveProvider = null;
+                LoopbackSourceStream = null;
+            }
+            catch (Exception ex) { MessageBox.Show(ex.ToString()); }
+        }
+
+        private static void StopPlayback() => AudioPlaybackEngine.Instance.StopAllSounds();
+        
+        private static void PlaySound(String file)
+        {
+            StopPlayback();
 
             try
             {
@@ -208,86 +269,86 @@ namespace JNSoundboardCore
             catch (NAudio.MmException ex)
             {
                 SystemSounds.Beep.Play();
-                string msg = ex.ToString();
-                MessageBox.Show((msg.Contains("UnspecifiedError calling waveOutOpen") ? "Something is wrong with either the sound you tried to play (" + file.Substring(file.LastIndexOf("\\") + 1) + ") (try converting it to another format) or your sound card driver\n\n" + msg : msg));
+                String msg = ex.ToString().Contains("UnspecifiedError calling waveOutOpen")
+                    ? $"Something is wrong with either the sound you tried to play ({file[(file.LastIndexOf('\\') + 1)..]}) (try converting it to another format) or your sound card driver\n\n{ex}"
+                    : ex.ToString();
+                MessageBox.Show(msg);
             }
         }
 
-        private void loadXMLFile(string path)
+        private void LoadXMLFile(String path)
         {
-            XMLSettings.Settings s = (XMLSettings.Settings)XMLSettings.ReadXML(typeof(XMLSettings.Settings), path);
-
-            if (s != null && s.SoundHotkeys != null && s.SoundHotkeys.Length > 0)
+            if (ReadXML(typeof(Settings), path) is Settings settings 
+                && settings.SoundHotkeys is not null 
+                && settings.SoundHotkeys.Count > 0)
             {
-                List<ListViewItem> items = new List<ListViewItem>();
-                string errors = "";
-                string sameKeys = "";
+                List<ListViewItem> items = [];
+                String errors = String.Empty;
+                String sameKeys = String.Empty;
 
-                for (int i = 0; i < s.SoundHotkeys.Length; i++)
+                for (Int32 i = 0; i < settings.SoundHotkeys.Count; i++)
                 {
-                    int kLength = s.SoundHotkeys[i].Keys.Length;
-                    bool keysNull = (kLength > 0 && !s.SoundHotkeys[i].Keys.Any(x => x != 0));
-                    int sLength = s.SoundHotkeys[i].SoundLocations.Length;
-                    bool soundsNotEmpty = s.SoundHotkeys[i].SoundLocations.All(x => !string.IsNullOrWhiteSpace(x));
-                    Environment.CurrentDirectory = Path.GetDirectoryName(Application.ExecutablePath);
-                    bool filesExist = s.SoundHotkeys[i].SoundLocations.All(x => File.Exists(x));
-
-                    if (keysNull || sLength < 1 || !soundsNotEmpty || !filesExist) //error in XML file
+                    if (settings.SoundHotkeys[i].Keys is not null && settings.SoundHotkeys[i].SoundLocations is not null)
                     {
-                        string tempErr = "";
+                        Int32 kLength = settings.SoundHotkeys[i].Keys!.Count;
+                        Boolean keysNull = kLength > 0 && !settings.SoundHotkeys[i].Keys!.Any(x => x != 0);
+                        Int32 sLength = settings.SoundHotkeys[i].SoundLocations!.Count;
+                        Boolean soundsNotEmpty = settings.SoundHotkeys[i].SoundLocations!.All(x => !String.IsNullOrWhiteSpace(x));
+                        Environment.CurrentDirectory = Path.GetDirectoryName(Application.ExecutablePath)!;
+                        Boolean filesExist = settings.SoundHotkeys[i].SoundLocations!.All(x => File.Exists(x));
 
-                        if (kLength == 0 && (sLength == 0 || !soundsNotEmpty)) tempErr = "entry is empty";
-                        else if (!keysNull) tempErr = "one or more keys are null";
-                        else if (sLength == 0) tempErr = "no sounds provided";
-                        else if (!filesExist) tempErr = "one or more sounds do not exist";
+                        if (keysNull || sLength < 1 || !soundsNotEmpty || !filesExist) //error in XML file
+                        {
+                            String tempErr = String.Empty;
 
-                        errors += "Entry #" + (i + 1).ToString() + " has an error: " + tempErr + "\r\n";
+                            if (kLength == 0 && (sLength == 0 || !soundsNotEmpty)) tempErr = "entry is empty";
+                            else if (!keysNull) tempErr = "one or more keys are null";
+                            else if (sLength == 0) tempErr = "no sounds provided";
+                            else if (!filesExist) tempErr = "one or more sounds do not exist";
+
+                            errors += "Entry #" + (i + 1).ToString() + " has an error: " + tempErr + "\r\n";
+                        }
+
+                        String keys = kLength < 1 ? String.Empty : Helper.KeysToString(settings.SoundHotkeys[i].Keys);
+
+                        if (keys != String.Empty && items.Count > 0 && items[^1].Text == keys && !sameKeys.Contains(keys))
+                            sameKeys += (sameKeys != String.Empty ? ", " : String.Empty) + keys;
+
+                        String windowText = String.Empty;
+                        if (!String.IsNullOrWhiteSpace(settings.SoundHotkeys[i].WindowTitle))
+                            windowText = settings.SoundHotkeys[i].WindowTitle!;
+
+                        ListViewItem tempItem = new(keys);
+                        tempItem.SubItems.Add(windowText);
+                        tempItem.SubItems.Add(sLength < 1 ? String.Empty : Helper.SoundLocsArrayToString(settings.SoundHotkeys[i].SoundLocations!));
+
+                        items.Add(tempItem); //add even if there was an error, so that the user can fix within the app
                     }
-
-                    string keys = (kLength < 1 ? "" : Helper.KeysToString(s.SoundHotkeys[i].Keys));
-
-                    if (keys != "" && items.Count > 0 && items[items.Count - 1].Text == keys && !sameKeys.Contains(keys))
-                    {
-                        sameKeys += (sameKeys != "" ? ", " : "") + keys;
-                    }
-
-                    string windowText = "";
-                    if (!string.IsNullOrWhiteSpace(s.SoundHotkeys[i].WindowTitle)) windowText = s.SoundHotkeys[i].WindowTitle;
-
-                    ListViewItem temp = new ListViewItem(keys);
-                    temp.SubItems.Add(windowText);
-                    temp.SubItems.Add((sLength < 1 ? "" : Helper.SoundLocsArrayToString(s.SoundHotkeys[i].SoundLocations)));
-
-                    items.Add(temp); //add even if there was an error, so that the user can fix within the app
                 }
-                
+
                 if (items.Count > 0)
                 {
-                    if (errors != "")
-                    {
-                        MessageBox.Show((errors == "" ? "" : errors));
-                    }
+                    if (!String.IsNullOrEmpty(errors))
+                        MessageBox.Show(errors);
 
-                    if (sameKeys != "")
-                    {
+                    if (!String.IsNullOrEmpty(sameKeys))
                         MessageBox.Show("Multiple entries using the same keys. The keys being used multiple times are: " + sameKeys);
-                    }
 
-                    soundHotkeys.Clear();
-                    soundHotkeys.AddRange(s.SoundHotkeys);
+                    SoundHotkeys.Clear();
+                    SoundHotkeys.AddRange(settings.SoundHotkeys);
 
-                    lvKeySounds.Items.Clear();
-                    lvKeySounds.Items.AddRange(items.ToArray());
+                    KeySoundsListView?.Items.Clear();
+                    KeySoundsListView?.Items.AddRange([.. items]);
 
-                    chKeys.Width = -2;
-                    chSoundLoc.Width = -2;
+                    KeysColumnHeader?.Width = -2;
+                    SoundLocationColumnHeader?.Width = -2;
 
-                    xmlLoc = path;
+                    XMLLocation = path;
                 }
                 else
                 {
                     SystemSounds.Beep.Play();
-                    MessageBox.Show("No entries found, or all entries had errors in them (key being None, sound location behind empty or non-existant)");
+                    MessageBox.Show("No entries found, or all entries had errors in them (key being 'None', sound location behind empty or non-existant)");
                 }
             }
             else
@@ -297,412 +358,386 @@ namespace JNSoundboardCore
             }
         }
 
-        private void editSelectedSoundHotkey()
+        private void EditSelectedSoundHotkey()
         {
-            if (lvKeySounds.SelectedItems.Count > 0)
+            if (KeySoundsListView?.SelectedItems.Count > 0)
             {
-                AddEditHotkeyForm form = new AddEditHotkeyForm();
+                AddEditHotkeyForm form = new();
 
-                ListViewItem item = lvKeySounds.SelectedItems[0];
+                ListViewItem item = KeySoundsListView.SelectedItems[0];
 
-                form.editStrings = new string[3];
-                form.editStrings[0] = item.Text;
-                form.editStrings[1] = item.SubItems[1].Text;
-                form.editStrings[2] = item.SubItems[2].Text;
+                form.EditStrings = [item.Text, item.SubItems[1].Text, item.SubItems[2].Text];
 
-                form.editIndex = lvKeySounds.SelectedIndices[0];
+                form.EditIndex = KeySoundsListView.SelectedIndices[0];
 
                 form.ShowDialog();
             }
         }
 
-        private void loopbackSourceStream_DataAvailable(object sender, WaveInEventArgs e)
-        {
-            if (loopbackWaveProvider != null && loopbackWaveProvider.BufferedDuration.TotalMilliseconds <= 100)
-                loopbackWaveProvider.AddSamples(e.Buffer, 0, e.BytesRecorded);
+        private void LoopbackSourceStream_DataAvailable(Object? sender, WaveInEventArgs? e)
+        { 
+            if (LoopbackWaveProvider != null && LoopbackWaveProvider.BufferedDuration.TotalMilliseconds <= 100)
+                LoopbackWaveProvider.AddSamples(e?.Buffer, 0, e?.BytesRecorded ?? 0);
         }
 
-        private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SettingsToolStripMenuItem_Click(Object? sender, EventArgs? e)
         {
-            SettingsForm form = new SettingsForm();
+            SettingsForm form = new();
             form.ShowDialog();
         }
 
-        private void texttospeechToolStripMenuItem_Click(object sender, EventArgs e)
+        private void TTSToolStripMenuItem_Click(Object? sender, EventArgs? e)
         {
-            TextToSpeechForm form = new TextToSpeechForm();
+            TextToSpeechForm form = new();
             form.ShowDialog();
         }
 
-        private void checkForUpdateToolStripMenuItem_Click(object sender, EventArgs e)
+        private void UpdateToolStripMenuItem_Click(Object? sender, EventArgs? e)
         {
-            Process.Start("https://github.com/Jitnaught/JNSoundboardCore/releases");
+            using Process process = new();
+            process.StartInfo.FileName = "https://github.com/Hollaptus/JNSoundboardCore/releases";
+            process.StartInfo.UseShellExecute = true;
+            process.Start();
         }
 
-        private void btnAdd_Click(object sender, EventArgs e)
+        private void AddButton_Click(Object? sender, EventArgs? e)
         {
-            AddEditHotkeyForm form = new AddEditHotkeyForm();
+            AddEditHotkeyForm form = new();
             form.ShowDialog();
         }
 
-        private void btnEdit_Click(object sender, EventArgs e)
+        private void EditButton_Click(Object? sender, EventArgs? e)
         {
-            editSelectedSoundHotkey();
+            EditSelectedSoundHotkey();
         }
 
-        private void btnRemove_Click(object sender, EventArgs e)
+        private void RemoveButton_Click(Object? sender, EventArgs? e)
         {
-            if (lvKeySounds.SelectedItems.Count > 0 && MessageBox.Show("Are you sure remove that item?", "Remove", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            if (KeySoundsListView?.SelectedItems.Count > 0 && MessageBox.Show("Are you sure remove that item?", "Remove", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
-                soundHotkeys.RemoveAt(lvKeySounds.SelectedIndices[0]);
-                lvKeySounds.Items.Remove(lvKeySounds.SelectedItems[0]);
+                SoundHotkeys.RemoveAt(KeySoundsListView.SelectedIndices[0]);
+                KeySoundsListView.Items.Remove(KeySoundsListView.SelectedItems[0]);
 
-                if (lvKeySounds.Items.Count == 0) cbEnable.Checked = false;
+                if (KeySoundsListView.Items.Count == 0) EnableCheckBox?.Checked = false;
             }
         }
 
-        private void btnClear_Click(object sender, EventArgs e)
+        private void ClearButton_Click(Object? sender, EventArgs? e)
         {
             if (MessageBox.Show("Are you sure you want to clear all items?", "Clear", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
-                soundHotkeys.Clear();
-                lvKeySounds.Items.Clear();
+                SoundHotkeys.Clear();
+                KeySoundsListView?.Items.Clear();
 
-                cbEnable.Checked = false;
+                EnableCheckBox?.Checked = false;
             }
         }
 
-        private void btnPlaySound_Click(object sender, EventArgs e)
+        private void PlaySelectedSoundButton_Click(Object? sender, EventArgs? e)
         {
-            if (lvKeySounds.SelectedItems.Count > 0)
-                playKeySound(soundHotkeys[lvKeySounds.SelectedIndices[0]]);
+            if (KeySoundsListView?.SelectedItems.Count > 0)
+                PlayKeySound(SoundHotkeys[KeySoundsListView.SelectedIndices[0]]);
         }
 
-        private void btnStopAllSounds_Click(object sender, EventArgs e)
+        private void StopAllSoundsButton_Click(Object? sender, EventArgs? e) => StopPlayback();
+        
+
+        private void LoadButton_Click(Object? sender, EventArgs? e)
         {
-            stopPlayback();
-        }
+            OpenFileDialog diag = new() {
+                Filter = "XML file containing keys and sounds|*.xml"
+            };
 
-        private void btnLoad_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog diag = new OpenFileDialog();
-
-            diag.Filter = "XML file containing keys and sounds|*.xml";
-
-            DialogResult result = diag.ShowDialog();
-
-            if (result == DialogResult.OK)
+            if (diag.ShowDialog() == DialogResult.OK)
             {
-                string path = diag.FileName;
-
-                loadXMLFile(path);
+                String path = diag.FileName;
+                LoadXMLFile(path);
             }
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
+        private void SaveButton_Click(Object? sender, EventArgs? e)
         {
-            if (xmlLoc == "" || !File.Exists(xmlLoc))
-                xmlLoc = Helper.UserGetXMLLocation();
+            if (XMLLocation == String.Empty || !File.Exists(XMLLocation))
+                XMLLocation = Helper.UserGetXMLLocation();
 
-            if (xmlLoc != "")
+            if (!String.IsNullOrEmpty(XMLLocation))
             {
-                XMLSettings.WriteXML(new XMLSettings.Settings() { SoundHotkeys = soundHotkeys.ToArray() }, xmlLoc);
-
+                WriteXML(new Settings(SoundHotkeys), XMLLocation);
                 MessageBox.Show("Saved");
             }
         }
 
-        private void btnSaveAs_Click(object sender, EventArgs e)
+        private void SaveAsButton_Click(Object? sender, EventArgs? e)
         {
-            string last = xmlLoc;
-
-            xmlLoc = Helper.UserGetXMLLocation();
-
-            if (xmlLoc == "")
-                xmlLoc = last;
-            else if (last != xmlLoc)
+            String lastLocation = XMLLocation;
+            XMLLocation = Helper.UserGetXMLLocation();
+            if (!String.IsNullOrEmpty(XMLLocation))
+                XMLLocation = lastLocation;
+            else if (lastLocation != XMLLocation)
             {
-                XMLSettings.WriteXML(new XMLSettings.Settings() { SoundHotkeys = soundHotkeys.ToArray() }, xmlLoc);
-
+                WriteXML(new Settings(SoundHotkeys), XMLLocation);
                 MessageBox.Show("Saved");
             }
         }
 
-        private void btnReloadDevices_Click(object sender, EventArgs e)
+        private void ReloadDevicesButton_Click(Object? sender, EventArgs? e)
         {
-            stopPlayback();
-            stopLoopback();
-
-            loadSoundDevices();
+            StopPlayback();
+            StopLoopback();
+            LoadSoundDevices();
         }
 
-        private void cbEnable_CheckedChanged(object sender, EventArgs e)
+        private void EnableCheckBox_CheckedChanged(Object? sender, EventArgs? e)
         {
-            if (cbEnable.Checked)
+            if (EnableCheckBox?.Checked == true)
             {
                 //enable timer if there are any keys to check. start loopback
-                if ((soundHotkeys != null && soundHotkeys.Count > 0) || (XMLSettings.soundboardSettings.LoadXMLFiles != null && XMLSettings.soundboardSettings.LoadXMLFiles.Length > 0))
-                    mainTimer.Enabled = true;
-                else
-                    cbEnable.Checked = false;
+                if ((SoundHotkeys != null && SoundHotkeys.Count > 0) || (CurrentSettings.LoadXMLFiles != null && CurrentSettings.LoadXMLFiles.Count > 0))
+                    MainTimer?.Enabled = true;
+                else EnableCheckBox.Checked = false;
 
-                if (cbEnable.Checked && cbPlaybackDevices.Items.Count > 0 && cbLoopbackDevices.SelectedIndex > 0)
-                    startLoopback();
+                if (EnableCheckBox.Checked && PlaybackDevicesComboBox?.Items.Count > 0 && LoopbackDevicesComboBox?.SelectedIndex > 0)
+                    StartLoopback();
             }
             else
             {
-                //disable timer, sounds, and loopback
+                //disable sounds, and loopback
                 // mainTimer.Enabled = false;
 
-                stopPlayback();
-                stopLoopback();
+                StopPlayback();
+                StopLoopback();
             }
         }
 
-        private void lvKeySounds_MouseDoubleClick(object sender, MouseEventArgs e)
+        private void KeySoundsListView_MouseDoubleClick(Object? sender, MouseEventArgs? e) => EditSelectedSoundHotkey();
+        
+        private void MainTimer_Tick(Object? sender, EventArgs? e)
         {
-            editSelectedSoundHotkey();
-        }
+            Int32 keysPressed = 0;
 
-        Keys[] keysJustPressed = null;
-        bool showingMsgBox = false;
-        int lastIndex = -1;
-
-        private void mainTimer_Tick(object sender, EventArgs e)
-        {
-            int keysPressed = 0;
-
-            if (XMLSettings.soundboardSettings.EnableSoundboardKeys != null && XMLSettings.soundboardSettings.EnableSoundboardKeys.Length > 0) //check that required keys are pressed to enable soundboard
+            if (CurrentSettings.EnableSoundboardKeys != null && CurrentSettings.EnableSoundboardKeys.Count > 0) //check that required keys are pressed to enable soundboard
             {
-                for (int i = 0; i < XMLSettings.soundboardSettings.EnableSoundboardKeys.Length; i++)
+                for (Int32 i = 0; i < CurrentSettings.EnableSoundboardKeys.Count; i++)
+                    if (Keyboard.IsKeyDown(CurrentSettings.EnableSoundboardKeys[i])) keysPressed++;
+                
+                if (keysPressed == CurrentSettings.EnableSoundboardKeys.Count 
+                && (KeysJustPressed == null || !KeysJustPressed.Intersect(CurrentSettings.EnableSoundboardKeys).Any()))
                 {
-                    if (Keyboard.IsKeyDown(XMLSettings.soundboardSettings.EnableSoundboardKeys[i])) keysPressed++;
+                    EnableCheckBox?.Checked ^= true;
+
+                    KeysJustPressed = CurrentSettings.EnableSoundboardKeys;
+
+                    return;
                 }
-
-                if (keysPressed == XMLSettings.soundboardSettings.EnableSoundboardKeys.Length)
-                {
-                    if (keysJustPressed == null || !keysJustPressed.Intersect(XMLSettings.soundboardSettings.EnableSoundboardKeys).Any())
-                    {
-                        cbEnable.Checked ^= true;
-
-                        keysJustPressed = XMLSettings.soundboardSettings.EnableSoundboardKeys;
-
-                        return;
-                    }
-                }
-                else if (keysJustPressed == XMLSettings.soundboardSettings.EnableSoundboardKeys)
-                    keysJustPressed = null;
+                else if (KeysJustPressed == CurrentSettings.EnableSoundboardKeys)
+                    KeysJustPressed = null;
 
                 keysPressed = 0;
             }
 
-            if (cbEnable.Checked)
+            if (EnableCheckBox?.Checked == true)
             {
-                if (soundHotkeys.Count > 0) //check that required keys are pressed to play sound
+                if (SoundHotkeys.Count > 0) //check that required keys are pressed to play sound
                 {
                     IntPtr foregroundWindow = Helper.GetForegroundWindow();
 
-                    for (int i = 0; i < soundHotkeys.Count; i++)
+                    for (Int32 i = 0; i < SoundHotkeys.Count; i++)
                     {
                         keysPressed = 0;
 
-                        if (soundHotkeys[i].Keys.Length == 0) continue;
+                        if (SoundHotkeys[i].Keys?.Count == 0
+                            || (SoundHotkeys[i].WindowTitle != String.Empty 
+                            && !Helper.IsForegroundWindow(SoundHotkeys[i].WindowTitle, foregroundWindow)))
+                            continue;
 
-                        if (soundHotkeys[i].WindowTitle != "" && !Helper.IsForegroundWindow(foregroundWindow, soundHotkeys[i].WindowTitle)) continue;
-
-                        for (int j = 0; j < soundHotkeys[i].Keys.Length; j++)
-                        {
-                            if (Keyboard.IsKeyDown(soundHotkeys[i].Keys[j]))
+                        for (Int32 j = 0; j < SoundHotkeys[i].Keys?.Count; j++)
+                            if (Keyboard.IsKeyDown(SoundHotkeys[i].Keys![j]))
                                 keysPressed++;
-                        }
-
-                        if (keysPressed == soundHotkeys[i].Keys.Length)
+                        
+                        if (keysPressed == SoundHotkeys[i].Keys?.Count)
                         {
-                            if (keysJustPressed == soundHotkeys[i].Keys) continue;
+                            if (KeysJustPressed == SoundHotkeys[i].Keys) continue;
 
-                            if (soundHotkeys[i].Keys.Length > 0 && soundHotkeys[i].Keys.All(x => x != 0) && soundHotkeys[i].SoundLocations.Length > 0
-                                && soundHotkeys[i].SoundLocations.Length > 0 && soundHotkeys[i].SoundLocations.Any(x => File.Exists(x)))
+                            if (SoundHotkeys[i].Keys?.Count > 0 
+                                && SoundHotkeys[i].Keys!.All(x => x != 0) 
+                                && SoundHotkeys[i].SoundLocations?.Count > 0 
+                                && SoundHotkeys[i].SoundLocations!.Any(x => File.Exists(x)))
                             {
-                                if (cbEnablePushToTalk.Checked && !keyUpPushToTalkKey && !Keyboard.IsKeyDown(pushToTalkKey)
-                                    && (cbWindows.SelectedIndex == 0 || Helper.IsForegroundWindow((string)cbWindows.SelectedItem)))
+                                if (EnablePushToTalkCheckBox?.Checked == true 
+                                    && !KeyUpPushToTalkKey 
+                                    && !Keyboard.IsKeyDown(PushToTalkKey)
+                                    && (WindowsComboBox?.SelectedIndex == 0 
+                                    || Helper.IsForegroundWindow(WindowsComboBox?.SelectedItem as String)))
                                 {
-                                    keyUpPushToTalkKey = true;
-                                    bool result = Keyboard.sendKey(pushToTalkKey, true);
+                                    KeyUpPushToTalkKey = true;
+                                    Boolean result = Keyboard.SendKey(PushToTalkKey, true);
                                     Thread.Sleep(100);
                                 }
 
-                                playKeySound(soundHotkeys[i]);
+                                PlayKeySound(SoundHotkeys[i]);
                                 return;
                             }
                         }
-                        else if (keysJustPressed == soundHotkeys[i].Keys)
-                            keysJustPressed = null;
+                        else if (KeysJustPressed == SoundHotkeys[i].Keys) KeysJustPressed = null;
                     }
 
                     keysPressed = 0;
                 }
 
-                if (XMLSettings.soundboardSettings.StopSoundKeys != null && XMLSettings.soundboardSettings.StopSoundKeys.Length > 0) //check that required keys are pressed to stop all sounds
+                if (CurrentSettings.StopSoundKeys != null && CurrentSettings.StopSoundKeys.Count > 0) //check that required keys are pressed to stop all sounds
                 {
-                    for (int i = 0; i < XMLSettings.soundboardSettings.StopSoundKeys.Length; i++)
-                    {
-                        if (Keyboard.IsKeyDown(XMLSettings.soundboardSettings.StopSoundKeys[i])) keysPressed++;
-                    }
-
-                    if (keysPressed == XMLSettings.soundboardSettings.StopSoundKeys.Length)
-                    {
-                        if (keysJustPressed == null || !keysJustPressed.Intersect(XMLSettings.soundboardSettings.StopSoundKeys).Any())
+                    for (Int32 i = 0; i < CurrentSettings.StopSoundKeys.Count; i++)
+                        if (Keyboard.IsKeyDown(CurrentSettings.StopSoundKeys[i])) keysPressed++;
+                    
+                    if (keysPressed == CurrentSettings.StopSoundKeys.Count)
+                        if (KeysJustPressed == null || !KeysJustPressed.Intersect(CurrentSettings.StopSoundKeys).Any())
                         {
-                            stopPlayback();
+                            StopPlayback();
 
-                            keysJustPressed = XMLSettings.soundboardSettings.StopSoundKeys;
+                            KeysJustPressed = CurrentSettings.StopSoundKeys;
 
                             return;
                         }
-                    }
-                    else if (keysJustPressed == XMLSettings.soundboardSettings.StopSoundKeys)
-                        keysJustPressed = null;
+                    else if (KeysJustPressed == CurrentSettings.StopSoundKeys)
+                        KeysJustPressed = null;
 
                     keysPressed = 0;
                 }
 
-                if (XMLSettings.soundboardSettings.LoadXMLFiles != null && XMLSettings.soundboardSettings.LoadXMLFiles.Length > 0) //check that required keys are pressed to load XML file
+                if (CurrentSettings.LoadXMLFiles != null && CurrentSettings.LoadXMLFiles.Count > 0) //check that required keys are pressed to load XML file
                 {
-                    for (int i = 0; i < XMLSettings.soundboardSettings.LoadXMLFiles.Length; i++)
+                    for (Int32 i = 0; i < CurrentSettings.LoadXMLFiles.Count; i++)
                     {
-                        if (XMLSettings.soundboardSettings.LoadXMLFiles[i].Keys.Length == 0) continue;
+                        if (CurrentSettings.LoadXMLFiles[i].Keys?.Count == 0) continue;
 
                         keysPressed = 0;
 
-                        for (int j = 0; j < XMLSettings.soundboardSettings.LoadXMLFiles[i].Keys.Length; j++)
+                        for (Int32 j = 0; j < CurrentSettings.LoadXMLFiles[i].Keys?.Count; j++)
+                            if (Keyboard.IsKeyDown(CurrentSettings.LoadXMLFiles[i].Keys![j])) keysPressed++;
+                        
+                        if (keysPressed == CurrentSettings.LoadXMLFiles[i].Keys?.Count)
                         {
-                            if (Keyboard.IsKeyDown(XMLSettings.soundboardSettings.LoadXMLFiles[i].Keys[j])) keysPressed++;
-                        }
-
-                        if (keysPressed == XMLSettings.soundboardSettings.LoadXMLFiles[i].Keys.Length)
-                        {
-                            if (keysJustPressed == null || !keysJustPressed.Intersect(XMLSettings.soundboardSettings.LoadXMLFiles[i].Keys).Any())
+                            if (KeysJustPressed == null || !KeysJustPressed.Intersect(CurrentSettings.LoadXMLFiles[i].Keys!).Any())
                             {
-                                if (!string.IsNullOrWhiteSpace(XMLSettings.soundboardSettings.LoadXMLFiles[i].XMLLocation) && File.Exists(XMLSettings.soundboardSettings.LoadXMLFiles[i].XMLLocation))
+                                if (!String.IsNullOrWhiteSpace(CurrentSettings.LoadXMLFiles[i].XMLLocation) && File.Exists(CurrentSettings.LoadXMLFiles[i].XMLLocation))
                                 {
-                                    keysJustPressed = XMLSettings.soundboardSettings.LoadXMLFiles[i].Keys;
+                                    KeysJustPressed = CurrentSettings.LoadXMLFiles[i].Keys;
 
-                                    loadXMLFile(XMLSettings.soundboardSettings.LoadXMLFiles[i].XMLLocation);
+                                    LoadXMLFile(CurrentSettings.LoadXMLFiles[i].XMLLocation!);
                                 }
 
                                 return;
                             }
                         }
-                        else if (keysJustPressed == XMLSettings.soundboardSettings.LoadXMLFiles[i].Keys)
+                        else if (KeysJustPressed == CurrentSettings.LoadXMLFiles[i].Keys)
                         {
-                            keysJustPressed = null;
+                            KeysJustPressed = null;
                         }
                     }
 
                     keysPressed = 0;
                 }
 
-                if (keyUpPushToTalkKey)
+                if (KeyUpPushToTalkKey)
                 {
-                    if (!Keyboard.IsKeyDown(pushToTalkKey)) keyUpPushToTalkKey = false;
+                    if (!Keyboard.IsKeyDown(PushToTalkKey)) KeyUpPushToTalkKey = false;
 
-                    if (cbWindows.SelectedIndex != 0 && !Helper.IsForegroundWindow((string)cbWindows.SelectedItem))
+                    if (WindowsComboBox?.SelectedIndex != 0 && !Helper.IsForegroundWindow(WindowsComboBox?.SelectedItem as String))
                     {
-                        keyUpPushToTalkKey = false;
-                        Keyboard.sendKey(pushToTalkKey, false);
+                        KeyUpPushToTalkKey = false;
+                        Keyboard.SendKey(PushToTalkKey, false);
                     }
                 }
             }
         }
 
-        private void playKeySound(XMLSettings.SoundHotkey currentKeysSounds)
+        private void PlayKeySound(SoundHotkey currentKeysSounds)
         {
-            Environment.CurrentDirectory = Path.GetDirectoryName(Application.ExecutablePath);
+            Environment.CurrentDirectory = Path.GetDirectoryName(Application.ExecutablePath)!;
 
-            string path;
+            String path = String.Empty;
 
-            if (currentKeysSounds.SoundLocations.Length > 1)
+            if (currentKeysSounds.SoundLocations?.Count > 1)
             {
                 //get random sound
-                int temp;
+                Int32 temp;
 
                 while (true)
                 {
-                    temp = rand.Next(0, currentKeysSounds.SoundLocations.Length);
+                    temp = Rand.Next(0, currentKeysSounds.SoundLocations.Count);
 
-                    if (temp != lastIndex && File.Exists(currentKeysSounds.SoundLocations[temp])) break;
+                    if (temp != LastIndex && File.Exists(currentKeysSounds.SoundLocations[temp])) break;
                     Thread.Sleep(1);
                 }
 
-                lastIndex = temp;
+                LastIndex = temp;
 
-                path = currentKeysSounds.SoundLocations[lastIndex];
+                path = currentKeysSounds.SoundLocations[LastIndex];
             }
-            else
-                path = currentKeysSounds.SoundLocations[0]; //get first sound
+            else if (currentKeysSounds.SoundLocations?.Count == 1)
+                path = currentKeysSounds.SoundLocations.First(); //get first sound
 
             if (File.Exists(path))
             {
-                playSound(path);
-                keysJustPressed = currentKeysSounds.Keys;
+                PlaySound(path);
+                KeysJustPressed = currentKeysSounds.Keys;
             }
-            else if (!showingMsgBox) //dont run when already showing messagebox (don't want a bunch of these on your screen, do you?)
+            else if (!ShowMsgBox) //dont run when already showing messagebox (don't want a bunch of these on your screen, do you?)
             {
                 SystemSounds.Beep.Play();
-                showingMsgBox = true;
+                ShowMsgBox = true;
                 MessageBox.Show("File " + path + " does not exist");
-                showingMsgBox = false;
+                ShowMsgBox = false;
             }
         }
 
-        private void cbLoopbackDevices_SelectedIndexChanged(object sender, EventArgs e)
+        private void LoopbackDevicesComboBox_SelectedIndexChanged(Object? sender, EventArgs? e)
         {
-            if (cbLoopbackDevices.SelectedIndex > 0)
+            if (LoopbackDevicesComboBox?.SelectedIndex > 0)
             {
-                if (cbEnable.Checked) //start loopback on new device, or stop loopback
+                if (EnableCheckBox?.Checked == true) //start loopback on new device, or stop loopback
                 {
-                    if ((string)cbLoopbackDevices.SelectedItem == "") stopLoopback();
-                    else startLoopback();
+                    if (String.IsNullOrEmpty(LoopbackDevicesComboBox.SelectedItem?.ToString())) StopLoopback();
+                    else StartLoopback();
                 }
                 else
-                    stopLoopback();
+                    StopLoopback();
             }
 
-            string deviceName = (string)cbLoopbackDevices.SelectedItem;
-            XMLSettings.soundboardSettings.LastLoopbackDevice = deviceName;
+            CurrentSettings.LastLoopbackDevice = LoopbackDevicesComboBox?.SelectedItem as String;
 
-            XMLSettings.SaveSoundboardSettingsXML();
+            SaveSoundboardSettingsXML();
         }
 
-        private void cbPlaybackDevices_SelectedIndexChanged(object sender, EventArgs e)
+        private void PlaybackDevicesComboBox_SelectedIndexChanged(Object? sender, EventArgs? e)
         {
             //start loopback on new device and stop all sounds playing
-            if (loopbackWaveOut != null && loopbackSourceStream != null && cbEnable.Checked)
-                startLoopback();
+            if (LoopbackWaveOut != null && LoopbackSourceStream != null && EnableCheckBox?.Checked == true)
+                StartLoopback();
 
-            stopPlayback();
+            StopPlayback();
 
-            initAudioPlaybackEngine();
+            InitAudioPlaybackEngine();
             
-            string deviceName = (string)cbPlaybackDevices.SelectedItem;
-            XMLSettings.soundboardSettings.LastPlaybackDevice = deviceName;
+            // String deviceName = PlaybackDevicesComboBox.SelectedItem.ToString();
+            CurrentSettings.LastPlaybackDevice = PlaybackDevicesComboBox?.SelectedItem as String;
 
-            XMLSettings.SaveSoundboardSettingsXML();
+            SaveSoundboardSettingsXML();
         }
 
-        private void frmMain_Resize(object sender, EventArgs e)
+        private void MainForm_Resize(Object? sender, EventArgs? e)
         {
             if (this.WindowState == FormWindowState.Minimized)
             {
-                notifyIcon1.Visible = true;
+                NotificationIcon?.Visible = true;
 
                 this.Hide();
             }
         }
 
-        private void notifyIcon1_MouseClick(object sender, MouseEventArgs e)
+        private void NotificationIcon_MouseClick(Object? sender, MouseEventArgs? e)
         {
-            notifyIcon1.Visible = false;
+            NotificationIcon?.Visible = false;
 
             //show form and give focus
             this.WindowState = FormWindowState.Minimized;
@@ -710,26 +745,23 @@ namespace JNSoundboardCore
             this.WindowState = FormWindowState.Normal;
         }
 
-        private void tbPushToTalkKey_Enter(object sender, EventArgs e)
+        private void PushToTalkKeyTextBox_Enter(Object? sender, EventArgs? e)
         {
-            if (!cbEnablePushToTalk.Checked)
+            if (!EnablePushToTalkCheckBox?.Checked == true)
             {
-                cbEnable.Checked = false;
-                pushToTalkKeyTimer.Enabled = true;
+                EnableCheckBox?.Checked = false;
+                PushToTalkKeyTimer?.Enabled = true;
             }
         }
 
-        private void tbPushToTalkKey_Leave(object sender, EventArgs e)
-        {
-            pushToTalkKeyTimer.Enabled = false;
-        }
-
-        private void pushToTalkKeyTimer_Tick(object sender, EventArgs e)
+        private void PushToTalkKeyTextBox_Leave(Object? sender, EventArgs? e) => PushToTalkKeyTimer?.Enabled = false;
+        
+        private void PushToTalkKeyTimer_Tick(Object? sender, EventArgs? e)
         {
             if (Keyboard.IsKeyDown(Keys.Escape))
             {
-                tbPushToTalkKey.Text = "";
-                pushToTalkKey = default(Keys);
+                PushToTalkKeyTextBox?.Text = String.Empty;
+                PushToTalkKey = default;
             }
             else
             {
@@ -737,30 +769,30 @@ namespace JNSoundboardCore
                 {
                     if (Keyboard.IsKeyDown(key))
                     {
-                        tbPushToTalkKey.Text = Helper.KeysToString(key);
-                        pushToTalkKey = key;
+                        PushToTalkKeyTextBox?.Text = Helper.KeysToString(key);
+                        PushToTalkKey = key;
                         break;
                     }
                 }
             }
         }
 
-        private void cbEnablePushToTalk_CheckedChanged(object sender, EventArgs e)
+        private void EnablePushToTalkCheckBox_CheckedChanged(Object? sender, EventArgs? e)
         {
-            if (cbEnablePushToTalk.Checked)
+            if (EnablePushToTalkCheckBox?.Checked == true)
             {
-                if (tbPushToTalkKey.Text == "")
+                if (String.IsNullOrEmpty(PushToTalkKeyTextBox?.Text))
                 {
-                    cbEnablePushToTalk.Checked = false;
+                    EnablePushToTalkCheckBox.Checked = false;
                     MessageBox.Show("There is no push to talk key entered");
                     return;
                 }
             }
         }
 
-        private void btnReloadWindows_Click(object sender, EventArgs e)
+        private void ReloadWindowsButton_Click(Object? sender, EventArgs? e)
         {
-            loadWindows();
+            LoadWindows();
         }
     }
 }

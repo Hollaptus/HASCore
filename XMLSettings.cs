@@ -6,21 +6,20 @@ namespace JNSoundboardCore
 {
     public class XMLSettings
     {
-        readonly static SoundboardSettings DEFAULT_SOUNDBOARD_SETTINGS = new SoundboardSettings([], [], [new LoadXMLFile([], "")], true, "", "");
+        readonly static SoundboardSettings DEFAULT_SOUNDBOARD_SETTINGS = new([], [], [new LoadXMLFile([], "")], true, "", "");
 
-        internal static SoundboardSettings soundboardSettings = new SoundboardSettings();
+        internal static SoundboardSettings CurrentSettings = new();
 
         //saving XML files like this makes the XML messy, but it works
         #region Keys and sounds settings
         public class SoundHotkey
         {
-            public Keys[] Keys;
-            public string WindowTitle;
-            public string[] SoundLocations;
+            public List<Keys>? Keys;
+            public String? WindowTitle;
+            public List<String>? SoundLocations;
+            public SoundHotkey() {}
 
-            public SoundHotkey() { }
-
-            public SoundHotkey(Keys[] keys, string windowTitle, string[] soundLocs)
+            public SoundHotkey(List<Keys> keys, String windowTitle, List<String> soundLocs)
             {
                 Keys = keys;
                 WindowTitle = windowTitle;
@@ -31,11 +30,11 @@ namespace JNSoundboardCore
         [Serializable]
         public class Settings
         {
-            public SoundHotkey[] SoundHotkeys;
+            public List<SoundHotkey>? SoundHotkeys;
 
-            public Settings() { }
+            public Settings() {}
 
-            public Settings(SoundHotkey[] sh)
+            public Settings(List<SoundHotkey> sh)
             {
                 SoundHotkeys = sh;
             }
@@ -45,12 +44,10 @@ namespace JNSoundboardCore
         #region Soundboard settings
         public class LoadXMLFile
         {
-            public Keys[] Keys;
-            public string XMLLocation;
-
-            public LoadXMLFile() { }
-
-            public LoadXMLFile(Keys[] keys, string xmlLocation)
+            public List<Keys>? Keys;
+            public String? XMLLocation;
+            public LoadXMLFile() {}
+            public LoadXMLFile(List<Keys> keys, String xmlLocation)
             {
                 Keys = keys;
                 XMLLocation = xmlLocation;
@@ -60,15 +57,20 @@ namespace JNSoundboardCore
         [Serializable]
         public class SoundboardSettings
         {
-            public Keys[] EnableSoundboardKeys;
-            public Keys[] StopSoundKeys;
-            public LoadXMLFile[] LoadXMLFiles;
-            public bool MinimizeToTray;
-            public string LastPlaybackDevice, LastLoopbackDevice;
-
+            public List<Keys>? EnableSoundboardKeys;
+            public List<Keys>? StopSoundKeys;
+            public List<LoadXMLFile>? LoadXMLFiles;
+            public Boolean? MinimizeToTray;
+            public String? LastPlaybackDevice, LastLoopbackDevice;
             public SoundboardSettings() { }
 
-            public SoundboardSettings(Keys[] enableSoundboard, Keys[] stopSoundKeys, LoadXMLFile[] loadXMLFiles, bool minimizeToTray, string lastPlaybackDevice, string lastLoopbackDevice)
+            public SoundboardSettings(
+                List<Keys> enableSoundboard,
+                List<Keys> stopSoundKeys,
+                List<LoadXMLFile> loadXMLFiles,
+                Boolean minimizeToTray,
+                String lastPlaybackDevice,
+                String lastLoopbackDevice)
             {
                 EnableSoundboardKeys = enableSoundboard;
                 StopSoundKeys = stopSoundKeys;
@@ -80,31 +82,31 @@ namespace JNSoundboardCore
         }
         #endregion
 
-        internal static void WriteXML(object kl, string xmlLoc)
+        internal static void WriteXML(Object kl, String xmlLoc)
         {
-            XmlSerializer serializer = new XmlSerializer(kl.GetType());
+            XmlSerializer serializer = new(kl.GetType());
 
-            using (MemoryStream memStream = new MemoryStream())
+            using (MemoryStream memStream = new())
             {
-                using (StreamWriter stream = new StreamWriter(memStream, Encoding.Unicode))
+                using (StreamWriter stream = new(memStream, Encoding.Unicode))
                 {
-                    XmlWriterSettings settings = new XmlWriterSettings();
+                    XmlWriterSettings settings = new();
                     settings.Indent = true;
                     settings.OmitXmlDeclaration = true;
 
                     using (XmlWriter writer = XmlWriter.Create(stream, settings))
                     {
-                        XmlSerializerNamespaces emptyNamepsaces = new XmlSerializerNamespaces([XmlQualifiedName.Empty]);
+                        XmlSerializerNamespaces emptyNamepsaces = new([XmlQualifiedName.Empty]);
                         serializer.Serialize(writer, kl, emptyNamepsaces);
 
-                        int count = (int)memStream.Length;
+                        Int32 count = (Int32)memStream.Length;
 
-                        byte[] arr = new byte[count];
+                        Byte[] arr = new Byte[count];
                         memStream.Seek(0, SeekOrigin.Begin);
 
                         memStream.Read(arr, 0, count);
 
-                        using (BinaryWriter binWriter = new BinaryWriter(File.Open(xmlLoc, FileMode.Create)))
+                        using (BinaryWriter binWriter = new(File.Open(xmlLoc, FileMode.Create)))
                         {
                             binWriter.Write(arr);
                         }
@@ -113,15 +115,15 @@ namespace JNSoundboardCore
             }
         }
 
-        internal static object ReadXML(Type type, string xmlLoc)
+        internal static Object? ReadXML(Type type, String xmlLoc)
         {
-            XmlSerializer serializer = new XmlSerializer(type);
+            XmlSerializer serializer = new(type);
 
             using (XmlReader reader = XmlReader.Create(xmlLoc))
             {
                 if (serializer.CanDeserialize(reader))
                 {
-                    return serializer.Deserialize(reader);
+                    return serializer.Deserialize(reader)!;
                 }
                 else return null;
             }
@@ -129,47 +131,47 @@ namespace JNSoundboardCore
 
         internal static void SaveSoundboardSettingsXML()
         {
-            WriteXML(soundboardSettings, Path.GetDirectoryName(Application.ExecutablePath) + "\\settings.xml");
+            WriteXML(CurrentSettings, Path.GetDirectoryName(Application.ExecutablePath) + "\\settings.xml");
         }
 
         internal static void LoadSoundboardSettingsXML()
         {
-            string filePath = Path.GetDirectoryName(Application.ExecutablePath) + "\\settings.xml";
+            String filePath = Path.GetDirectoryName(Application.ExecutablePath) + "\\settings.xml";
 
             if (File.Exists(filePath))
             {
-                SoundboardSettings settings;
+                SoundboardSettings? settings;
 
                 try
                 {
-                    settings = (SoundboardSettings)ReadXML(typeof(SoundboardSettings), filePath);
+                    settings = ReadXML(typeof(SoundboardSettings), filePath) as SoundboardSettings;
                 }
                 catch
                 {
-                    soundboardSettings = DEFAULT_SOUNDBOARD_SETTINGS;
+                    CurrentSettings = DEFAULT_SOUNDBOARD_SETTINGS;
                     return;
                 }
 
                 if (settings == null)
                 {
-                    soundboardSettings = DEFAULT_SOUNDBOARD_SETTINGS;
+                    CurrentSettings = DEFAULT_SOUNDBOARD_SETTINGS;
                     return;
                 }
 
-                if (settings.StopSoundKeys == null) settings.StopSoundKeys = [];
+                settings.StopSoundKeys ??= [];
 
-                if (settings.LoadXMLFiles == null) settings.LoadXMLFiles = [];
+                settings.LoadXMLFiles ??= [];
 
-                if (settings.LastPlaybackDevice == null) settings.LastPlaybackDevice = "";
+                settings.LastPlaybackDevice ??= String.Empty;
 
-                if (settings.LastLoopbackDevice == null) settings.LastLoopbackDevice = "";
+                settings.LastLoopbackDevice ??= String.Empty;
 
-                soundboardSettings = settings;
+                CurrentSettings = settings;
             }
             else
             {
                 WriteXML(DEFAULT_SOUNDBOARD_SETTINGS, filePath);
-                soundboardSettings = DEFAULT_SOUNDBOARD_SETTINGS;
+                CurrentSettings = DEFAULT_SOUNDBOARD_SETTINGS;
             }
         }
     }
