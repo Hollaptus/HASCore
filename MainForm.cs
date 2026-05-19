@@ -250,23 +250,13 @@ namespace JNSoundboardCore
         
         private static void PlaySound(String file)
         {
-            StopPlayback();
+            // StopPlayback();
 
             try
             {
                 AudioPlaybackEngine.Instance.PlaySound(file);
             }
-            catch (FormatException ex)
-            {
-                SystemSounds.Beep.Play();
-                MessageBox.Show(ex.ToString());
-            }
-            catch (System.Runtime.InteropServices.COMException ex)
-            {
-                SystemSounds.Beep.Play();
-                MessageBox.Show(ex.ToString());
-            }
-            catch (NAudio.MmException ex)
+            catch (Exception ex)
             {
                 SystemSounds.Beep.Play();
                 String msg = ex.ToString().Contains("UnspecifiedError calling waveOutOpen")
@@ -278,6 +268,9 @@ namespace JNSoundboardCore
 
         private void LoadXMLFile(String path)
         {
+            // We try to read the settings in the specified path, if the file
+            // is an XML file that can be serialized as Settings class and its
+            // contents are not empty, we parse the entries and load them
             if (ReadXML(typeof(Settings), path) is Settings settings 
                 && settings.SoundHotkeys is not null 
                 && settings.SoundHotkeys.Count > 0)
@@ -286,63 +279,71 @@ namespace JNSoundboardCore
                 String errors = String.Empty;
                 String sameKeys = String.Empty;
 
-                for (Int32 i = 0; i < settings.SoundHotkeys.Count; i++)
+                foreach (SoundHotkey hotkey in settings.SoundHotkeys)
                 {
-                    if (settings.SoundHotkeys[i].Keys is not null && settings.SoundHotkeys[i].SoundLocations is not null)
+                    // Getting the count of items inside lists.
+                    Int32 keysCount = hotkey.Keys?.Count ?? 0;
+                    Int32 slCount = hotkey.SoundLocations.Count;
+                    // Checking if there are any entries and their files exist.
+                    Boolean keysNull = keysCount > 0 && (!hotkey.Keys?.Any(x => x != 0) ?? true);   
+                    Boolean soundsNotEmpty = hotkey.SoundLocations.All(x => !String.IsNullOrWhiteSpace(x));
+                    Boolean filesExist = hotkey.SoundLocations.All(x => File.Exists(x));
+                    // We suppress nullability warning because the executable path is never null.
+                    Environment.CurrentDirectory = Path.GetDirectoryName(Application.ExecutablePath)!;
+
+                    // If there are any errors in the XML, we build the error message,
+                    // but we don't throw an error so that the user can fix the errors 
+                    // from within the app.
+                    if (keysNull || slCount < 1 || !soundsNotEmpty || !filesExist) 
                     {
-                        Int32 kLength = settings.SoundHotkeys[i].Keys!.Count;
-                        Boolean keysNull = kLength > 0 && !settings.SoundHotkeys[i].Keys!.Any(x => x != 0);
-                        Int32 sLength = settings.SoundHotkeys[i].SoundLocations!.Count;
-                        Boolean soundsNotEmpty = settings.SoundHotkeys[i].SoundLocations!.All(x => !String.IsNullOrWhiteSpace(x));
-                        Environment.CurrentDirectory = Path.GetDirectoryName(Application.ExecutablePath)!;
-                        Boolean filesExist = settings.SoundHotkeys[i].SoundLocations!.All(x => File.Exists(x));
+                        String tempErr = String.Empty;
+                        if (keysCount == 0 && (slCount == 0 || !soundsNotEmpty)) tempErr = "entry is empty";
+                        else if (!keysNull) tempErr = "one or more keys are null";
+                        else if (slCount == 0) tempErr = "no sounds provided";
+                        else if (!filesExist) tempErr = "one or more sounds do not exist";
 
-                        if (keysNull || sLength < 1 || !soundsNotEmpty || !filesExist) //error in XML file
-                        {
-                            String tempErr = String.Empty;
-
-                            if (kLength == 0 && (sLength == 0 || !soundsNotEmpty)) tempErr = "entry is empty";
-                            else if (!keysNull) tempErr = "one or more keys are null";
-                            else if (sLength == 0) tempErr = "no sounds provided";
-                            else if (!filesExist) tempErr = "one or more sounds do not exist";
-
-                            errors += "Entry #" + (i + 1).ToString() + " has an error: " + tempErr + "\r\n";
-                        }
-
-                        String keys = kLength < 1 ? String.Empty : Helper.KeysToString(settings.SoundHotkeys[i].Keys);
-
-                        if (keys != String.Empty && items.Count > 0 && items[^1].Text == keys && !sameKeys.Contains(keys))
-                            sameKeys += (sameKeys != String.Empty ? ", " : String.Empty) + keys;
-
-                        String windowText = String.Empty;
-                        if (!String.IsNullOrWhiteSpace(settings.SoundHotkeys[i].WindowTitle))
-                            windowText = settings.SoundHotkeys[i].WindowTitle!;
-
-                        ListViewItem tempItem = new(keys);
-                        tempItem.SubItems.Add(windowText);
-                        tempItem.SubItems.Add(sLength < 1 ? String.Empty : Helper.SoundLocsArrayToString(settings.SoundHotkeys[i].SoundLocations!));
-
-                        items.Add(tempItem); //add even if there was an error, so that the user can fix within the app
+                        errors += $"Entry #{settings.SoundHotkeys.IndexOf(hotkey)} has an error: {tempErr}\r\n";
                     }
+
+                    // Trying to get the keys for the entry if there are any.
+                    String keys = Helper.KeysToString(hotkey.Keys ?? []);
+
+                    // Checking for repeating keys and building the error message.
+                    if (!String.IsNullOrEmpty(keys) && items.Count > 0 && items[^1].Text == keys && !sameKeys.Contains(keys))
+                        sameKeys += (sameKeys != String.Empty ? ", " : String.Empty) + keys;
+
+                    // Adding a new item for a ListView
+                    ListViewItem tempItem = new(keys);
+                    tempItem.SubItems.Add(hotkey.WindowTitle);
+                    tempItem.SubItems.Add(Helper.SoundLocsArrayToString(hotkey.SoundLocations));
+                    
+                    // Then appending to the end of the list of items
+                    items.Add(tempItem);
                 }
 
+                // If there are any items, we add them to the ListView
                 if (items.Count > 0)
                 {
+                    // Also if there were any errors, we show them to the user
                     if (!String.IsNullOrEmpty(errors))
                         MessageBox.Show(errors);
 
                     if (!String.IsNullOrEmpty(sameKeys))
                         MessageBox.Show("Multiple entries using the same keys. The keys being used multiple times are: " + sameKeys);
 
+                    // Clearing the lists and adding the new values
                     SoundHotkeys.Clear();
                     SoundHotkeys.AddRange(settings.SoundHotkeys);
-
                     KeySoundsListView?.Items.Clear();
                     KeySoundsListView?.Items.AddRange([.. items]);
 
+                    // We set the width of the column headers to this specific number
+                    // so we autosize to the width of the heading, according to .NET docs:
+                    // https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.columnheader.width
                     KeysColumnHeader?.Width = -2;
                     SoundLocationColumnHeader?.Width = -2;
 
+                    // Setting the field to current XML file path for saving the changes
                     XMLLocation = path;
                 }
                 else
@@ -360,17 +361,22 @@ namespace JNSoundboardCore
 
         private void EditSelectedSoundHotkey()
         {
+            // If there are any selected items in the ListView,
+            // we create the edit form and pass the parameters
+            // of the contents and index of selected item
             if (KeySoundsListView?.SelectedItems.Count > 0)
             {
-                AddEditHotkeyForm form = new();
-
+                // Get the first available item
                 ListViewItem item = KeySoundsListView.SelectedItems[0];
 
-                form.EditStrings = [item.Text, item.SubItems[1].Text, item.SubItems[2].Text];
-
-                form.EditIndex = KeySoundsListView.SelectedIndices[0];
-
-                form.ShowDialog();
+                // Create a new instance of the form and run dialog
+                new AddEditHotkeyForm
+                {
+                    // Get its contents and index and write their values
+                    // to the fields of what we are editing
+                    EditStrings = [item.Text, item.SubItems[1].Text, item.SubItems[2].Text],
+                    EditIndex = KeySoundsListView.SelectedIndices[0]
+                }.ShowDialog();
             }
         }
 
@@ -380,17 +386,9 @@ namespace JNSoundboardCore
                 LoopbackWaveProvider.AddSamples(e?.Buffer, 0, e?.BytesRecorded ?? 0);
         }
 
-        private void SettingsToolStripMenuItem_Click(Object? sender, EventArgs? e)
-        {
-            SettingsForm form = new();
-            form.ShowDialog();
-        }
+        private void SettingsToolStripMenuItem_Click(Object? sender, EventArgs? e) => new SettingsForm().ShowDialog();
 
-        private void TTSToolStripMenuItem_Click(Object? sender, EventArgs? e)
-        {
-            TextToSpeechForm form = new();
-            form.ShowDialog();
-        }
+        private void TTSToolStripMenuItem_Click(Object? sender, EventArgs? e) => new TextToSpeechForm().ShowDialog();
 
         private void UpdateToolStripMenuItem_Click(Object? sender, EventArgs? e)
         {
@@ -400,20 +398,14 @@ namespace JNSoundboardCore
             process.Start();
         }
 
-        private void AddButton_Click(Object? sender, EventArgs? e)
-        {
-            AddEditHotkeyForm form = new();
-            form.ShowDialog();
-        }
+        private void AddButton_Click(Object? sender, EventArgs? e) => new AddEditHotkeyForm().ShowDialog();
 
-        private void EditButton_Click(Object? sender, EventArgs? e)
-        {
-            EditSelectedSoundHotkey();
-        }
+        private void EditButton_Click(Object? sender, EventArgs? e) => EditSelectedSoundHotkey();
 
         private void RemoveButton_Click(Object? sender, EventArgs? e)
         {
-            if (KeySoundsListView?.SelectedItems.Count > 0 && MessageBox.Show("Are you sure remove that item?", "Remove", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            if (KeySoundsListView?.SelectedItems.Count > 0 
+            && MessageBox.Show("Are you sure remove that item?", "Remove", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
                 SoundHotkeys.RemoveAt(KeySoundsListView.SelectedIndices[0]);
                 KeySoundsListView.Items.Remove(KeySoundsListView.SelectedItems[0]);
@@ -441,47 +433,57 @@ namespace JNSoundboardCore
 
         private void StopAllSoundsButton_Click(Object? sender, EventArgs? e) => StopPlayback();
         
-
         private void LoadButton_Click(Object? sender, EventArgs? e)
         {
-            OpenFileDialog diag = new() {
-                Filter = "XML file containing keys and sounds|*.xml"
-            };
-
+            // Creating a new instance of user dialog.
+            OpenFileDialog diag = new() { Filter = "XML file containing keys and sounds|*.xml" };
+            // If the result is OK, trying to load the file 
+            // that has been specified in the dialog as XML settings
             if (diag.ShowDialog() == DialogResult.OK)
-            {
-                String path = diag.FileName;
-                LoadXMLFile(path);
-            }
+                LoadXMLFile(diag.FileName);
         }
 
         private void SaveButton_Click(Object? sender, EventArgs? e)
         {
-            if (XMLLocation == String.Empty || !File.Exists(XMLLocation))
+            // We check if there is a saved XML file location, if there is,
+            // we skip this check. Otherwise, we ask the user the location
+            // where we shoud save this XML file.
+            if (!File.Exists(XMLLocation))
                 XMLLocation = Helper.UserGetXMLLocation();
 
+            // If the location is not empty - we write the XML file to that location.
             if (!String.IsNullOrEmpty(XMLLocation))
             {
                 WriteXML(new Settings(SoundHotkeys), XMLLocation);
-                MessageBox.Show("Saved");
+                MessageBox.Show($"Saved as:\n{XMLLocation}");
             }
+            // Otherwise, we show a message that file hasn't been saved
+            else MessageBox.Show("Location was empty, file hasn't been saved!");
         }
 
         private void SaveAsButton_Click(Object? sender, EventArgs? e)
         {
+            // Saving the previous location for reference.
             String lastLocation = XMLLocation;
+            // Asking the user to tell us where to save the file.
             XMLLocation = Helper.UserGetXMLLocation();
-            if (!String.IsNullOrEmpty(XMLLocation))
+            // If the location was empty and we have a previous one - save to that one.
+            if (String.IsNullOrEmpty(XMLLocation) && !String.IsNullOrEmpty(lastLocation))
                 XMLLocation = lastLocation;
-            else if (lastLocation != XMLLocation)
+            
+            // If the location is not empty - we write the XML file to that location.
+            if (!String.IsNullOrEmpty(XMLLocation))
             {
                 WriteXML(new Settings(SoundHotkeys), XMLLocation);
-                MessageBox.Show("Saved");
+                MessageBox.Show($"Saved as:\n{XMLLocation}");
             }
+            // Otherwise, we show a message that file hasn't been saved
+            else MessageBox.Show("Location was empty, file hasn't been saved!");
         }
 
         private void ReloadDevicesButton_Click(Object? sender, EventArgs? e)
         {
+            // Stopping all current sounds and reloading the devices
             StopPlayback();
             StopLoopback();
             LoadSoundDevices();
@@ -489,21 +491,23 @@ namespace JNSoundboardCore
 
         private void EnableCheckBox_CheckedChanged(Object? sender, EventArgs? e)
         {
+            // If the checkbox is enabled - set the timer and start loopback 
             if (EnableCheckBox?.Checked == true)
             {
-                //enable timer if there are any keys to check. start loopback
-                if ((SoundHotkeys != null && SoundHotkeys.Count > 0) || (CurrentSettings.LoadXMLFiles != null && CurrentSettings.LoadXMLFiles.Count > 0))
+                // If there are any settings or hotkeys - enable the timer
+                if ((SoundHotkeys != null && SoundHotkeys.Count > 0) 
+                || (CurrentSettings.LoadXMLFiles != null && CurrentSettings.LoadXMLFiles.Count > 0))
                     MainTimer?.Enabled = true;
+                // Otherwise, disable it
                 else EnableCheckBox.Checked = false;
 
+                // Start the loopback if there are any devices and soundboard is enabled
                 if (EnableCheckBox.Checked && PlaybackDevicesComboBox?.Items.Count > 0 && LoopbackDevicesComboBox?.SelectedIndex > 0)
                     StartLoopback();
             }
+            // Otherwise, stop all sounds and dispose of objects
             else
             {
-                //disable sounds, and loopback
-                // mainTimer.Enabled = false;
-
                 StopPlayback();
                 StopLoopback();
             }
@@ -513,14 +517,19 @@ namespace JNSoundboardCore
         
         private void MainTimer_Tick(Object? sender, EventArgs? e)
         {
-            Int32 keysPressed = 0;
+            List<Keys> keysPressed = Keyboard.GetPressedKeys();
+            Int32 keysPressedCount = 0;
 
-            if (CurrentSettings.EnableSoundboardKeys != null && CurrentSettings.EnableSoundboardKeys.Count > 0) //check that required keys are pressed to enable soundboard
+            // Check that required keys are pressed to enable soundboard.
+            if (CurrentSettings.EnableSoundboardKeys?.Count > 0) 
             {
-                for (Int32 i = 0; i < CurrentSettings.EnableSoundboardKeys.Count; i++)
-                    if (Keyboard.IsKeyDown(CurrentSettings.EnableSoundboardKeys[i])) keysPressed++;
+                foreach (Keys key in CurrentSettings.EnableSoundboardKeys)
+                    if (keysPressed.Contains(key)) keysPressedCount++;
                 
-                if (keysPressed == CurrentSettings.EnableSoundboardKeys.Count 
+                // for (Int32 i = 0; i < CurrentSettings.EnableSoundboardKeys.Count; i++)
+                //     if (Keyboard.IsKeyDown(CurrentSettings.EnableSoundboardKeys[i])) keysPressedCount++;
+                
+                if (keysPressedCount == CurrentSettings.EnableSoundboardKeys.Count 
                 && (KeysJustPressed == null || !KeysJustPressed.Intersect(CurrentSettings.EnableSoundboardKeys).Any()))
                 {
                     EnableCheckBox?.Checked ^= true;
@@ -532,7 +541,7 @@ namespace JNSoundboardCore
                 else if (KeysJustPressed == CurrentSettings.EnableSoundboardKeys)
                     KeysJustPressed = null;
 
-                keysPressed = 0;
+                keysPressedCount = 0;
             }
 
             if (EnableCheckBox?.Checked == true)
@@ -543,18 +552,21 @@ namespace JNSoundboardCore
 
                     for (Int32 i = 0; i < SoundHotkeys.Count; i++)
                     {
-                        keysPressed = 0;
+                        keysPressedCount = 0;
 
                         if (SoundHotkeys[i].Keys?.Count == 0
                             || (SoundHotkeys[i].WindowTitle != String.Empty 
                             && !Helper.IsForegroundWindow(SoundHotkeys[i].WindowTitle, foregroundWindow)))
                             continue;
 
-                        for (Int32 j = 0; j < SoundHotkeys[i].Keys?.Count; j++)
-                            if (Keyboard.IsKeyDown(SoundHotkeys[i].Keys![j]))
-                                keysPressed++;
-                        
-                        if (keysPressed == SoundHotkeys[i].Keys?.Count)
+                        // for (Int32 j = 0; j < SoundHotkeys[i].Keys?.Count; j++)
+                        //     if (Keyboard.IsKeyDown(SoundHotkeys[i].Keys![j]))
+                        //         keysPressedCount++;
+                        if (SoundHotkeys[i].Keys != null)
+                            foreach (Keys key in SoundHotkeys[i]?.Keys!)
+                                if (keysPressed.Contains(key)) keysPressedCount++;
+
+                        if (keysPressedCount == SoundHotkeys[i].Keys?.Count)
                         {
                             if (KeysJustPressed == SoundHotkeys[i].Keys) continue;
 
@@ -581,15 +593,15 @@ namespace JNSoundboardCore
                         else if (KeysJustPressed == SoundHotkeys[i].Keys) KeysJustPressed = null;
                     }
 
-                    keysPressed = 0;
+                    keysPressedCount = 0;
                 }
 
                 if (CurrentSettings.StopSoundKeys != null && CurrentSettings.StopSoundKeys.Count > 0) //check that required keys are pressed to stop all sounds
                 {
                     for (Int32 i = 0; i < CurrentSettings.StopSoundKeys.Count; i++)
-                        if (Keyboard.IsKeyDown(CurrentSettings.StopSoundKeys[i])) keysPressed++;
+                        if (Keyboard.IsKeyDown(CurrentSettings.StopSoundKeys[i])) keysPressedCount++;
                     
-                    if (keysPressed == CurrentSettings.StopSoundKeys.Count)
+                    if (keysPressedCount == CurrentSettings.StopSoundKeys.Count)
                         if (KeysJustPressed == null || !KeysJustPressed.Intersect(CurrentSettings.StopSoundKeys).Any())
                         {
                             StopPlayback();
@@ -601,7 +613,7 @@ namespace JNSoundboardCore
                     else if (KeysJustPressed == CurrentSettings.StopSoundKeys)
                         KeysJustPressed = null;
 
-                    keysPressed = 0;
+                    keysPressedCount = 0;
                 }
 
                 if (CurrentSettings.LoadXMLFiles != null && CurrentSettings.LoadXMLFiles.Count > 0) //check that required keys are pressed to load XML file
@@ -610,12 +622,12 @@ namespace JNSoundboardCore
                     {
                         if (CurrentSettings.LoadXMLFiles[i].Keys?.Count == 0) continue;
 
-                        keysPressed = 0;
+                        keysPressedCount = 0;
 
                         for (Int32 j = 0; j < CurrentSettings.LoadXMLFiles[i].Keys?.Count; j++)
-                            if (Keyboard.IsKeyDown(CurrentSettings.LoadXMLFiles[i].Keys![j])) keysPressed++;
+                            if (Keyboard.IsKeyDown(CurrentSettings.LoadXMLFiles[i].Keys![j])) keysPressedCount++;
                         
-                        if (keysPressed == CurrentSettings.LoadXMLFiles[i].Keys?.Count)
+                        if (keysPressedCount == CurrentSettings.LoadXMLFiles[i].Keys?.Count)
                         {
                             if (KeysJustPressed == null || !KeysJustPressed.Intersect(CurrentSettings.LoadXMLFiles[i].Keys!).Any())
                             {
@@ -635,7 +647,7 @@ namespace JNSoundboardCore
                         }
                     }
 
-                    keysPressed = 0;
+                    keysPressedCount = 0;
                 }
 
                 if (KeyUpPushToTalkKey)
@@ -657,7 +669,7 @@ namespace JNSoundboardCore
 
             String path = String.Empty;
 
-            if (currentKeysSounds.SoundLocations?.Count > 1)
+            if (currentKeysSounds.SoundLocations.Count > 1)
             {
                 //get random sound
                 Int32 temp;
@@ -674,7 +686,7 @@ namespace JNSoundboardCore
 
                 path = currentKeysSounds.SoundLocations[LastIndex];
             }
-            else if (currentKeysSounds.SoundLocations?.Count == 1)
+            else if (currentKeysSounds.SoundLocations.Count == 1)
                 path = currentKeysSounds.SoundLocations.First(); //get first sound
 
             if (File.Exists(path))

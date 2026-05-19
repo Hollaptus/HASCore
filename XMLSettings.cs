@@ -16,7 +16,7 @@ namespace JNSoundboardCore
         {
             public List<Keys>? Keys;
             public String? WindowTitle;
-            public List<String>? SoundLocations;
+            public List<String> SoundLocations = [];
             public SoundHotkey() {}
 
             public SoundHotkey(List<Keys> keys, String windowTitle, List<String> soundLocs)

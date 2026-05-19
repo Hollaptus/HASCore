@@ -53,8 +53,8 @@ namespace JNSoundboardCore
             }
 
             // Checking if there are any hotkeys mapped to specific actions.
-            ToggleKeysTextBox?.Text = Helper.KeysToString(CurrentSettings?.EnableSoundboardKeys);
-            StopKeysTextBox?.Text = Helper.KeysToString(CurrentSettings?.StopSoundKeys);
+            ToggleKeysTextBox?.Text = Helper.KeysToString(CurrentSettings?.EnableSoundboardKeys ?? []);
+            StopKeysTextBox?.Text = Helper.KeysToString(CurrentSettings?.StopSoundKeys ?? []);
             // Also checking if the minimize to tray function is enabled.
             MinimizeToTrayCheckBox?.Checked = CurrentSettings is not null 
                 && CurrentSettings.MinimizeToTray.HasValue 
