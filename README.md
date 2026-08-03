@@ -33,11 +33,10 @@ Lastly, in the application that is going to use the microphone, set the micropho
 
 Screenshots: 
 
-![Main window](https://i.imgur.com/7mGHN9g.jpg)
+<p><img width="740" height="600" alt="Main Window" src="https://github.com/user-attachments/assets/5e53a8ea-0dcb-4278-8161-30effa145068" /></p>
 
-![Add hokey window](https://i.imgur.com/pgKoli1.jpg)
+<p><img width="428" height="296" alt="Add Hotkey Window" src="https://github.com/user-attachments/assets/5aa899f4-1279-454c-889a-1e5c0dd4d7a1" /></p>
 
-![Settings window](https://i.imgur.com/yYsm1TR.jpg)
+<p><img width="577" height="485" alt="Settings Window" src="https://github.com/user-attachments/assets/3475f44f-5c42-4637-95d6-5b9f27578ab7" /></p>
 
-![Text-to-speech window](https://i.imgur.com/EoPayHn.png)
-
+<p><img width="483" height="294" alt="Text-To-Speech Window" src="https://github.com/user-attachments/assets/fa2806a8-eeb6-4f9b-a71f-0185d68055b8" /></p>
