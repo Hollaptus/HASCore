@@ -1,8 +1,11 @@
-# HAS (Hollow Apparatus Soundboard) Core
+<h1 align="center">HAS Core</h1>
+<div align="center">
+  <img height="360" alt="HAS Core" src="https://github.com/user-attachments/assets/c8d5bfc4-f92e-44aa-a2b9-ddfc0669dcb8" />
+</div>
+
+<b>HAS</b> <i>(Hollow Apparatus Soundboard)</i> <b>Core</b> - a program written in C# using the NAudio library that uses hotkeys to play sounds into a chosen sound device. It is similar to [EXP Soundboard](https://sourceforge.net/projects/expsoundboard/), except that HAS Core is not as cross-platform as EXP, but, there are more features in HASC than EXP.
 
 This project is a continuation of a project ["JNSoundboard"](https://github.com/Nothing4You/JNSoundboard), using the same source code as base, but reworked and made on ".NET Core" instead of ".NET Framework".
-
-A program written in C# using the NAudio library that uses hotkeys to play sounds into a chosen sound device. It is similar to [EXP Soundboard](https://sourceforge.net/projects/expsoundboard/), except that HAS Core is not as cross-platform as EXP, but, there are more features in HASC than EXP.
 
 **Binaries are on the [Releases](https://github.com/Hollaptus/HASCore/releases/) page.**
 
