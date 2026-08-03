@@ -2,11 +2,11 @@
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     public class XMLSettings
     {
-        readonly static SoundboardSettings DEFAULT_SOUNDBOARD_SETTINGS = new([], [], [new LoadXMLFile([], "")], true, "", "");
+        readonly static SoundboardSettings DEFAULT_SOUNDBOARD_SETTINGS = new([], [], [new LoadXMLFile([], "")], true, false, false, 500, "", "");
 
         internal static SoundboardSettings CurrentSettings = new();
 
@@ -14,9 +14,10 @@ namespace JNSoundboardCore
         #region Keys and sounds settings
         public class SoundHotkey
         {
-            public List<Keys>? Keys;
-            public String? WindowTitle;
-            public List<String> SoundLocations = [];
+            public List<Keys>? Keys { get; set; } = null;
+            public String? WindowTitle { get; set; } = null;
+            public List<String> SoundLocations { get; set; } = [];
+            public DateTime? LastPlayTime { get; set; } = null;
             public SoundHotkey() {}
 
             public SoundHotkey(List<Keys> keys, String windowTitle, List<String> soundLocs)
@@ -61,7 +62,11 @@ namespace JNSoundboardCore
             public List<Keys>? StopSoundKeys;
             public List<LoadXMLFile>? LoadXMLFiles;
             public Boolean? MinimizeToTray;
-            public String? LastPlaybackDevice, LastLoopbackDevice;
+            public Boolean? PlayOverEachother;
+            public Boolean? RepeatOnHold;
+            public Int32? DelayInMs;
+            public String? LastPlaybackDevice;
+            public String? LastLoopbackDevice;
             public SoundboardSettings() { }
 
             public SoundboardSettings(
@@ -69,6 +74,9 @@ namespace JNSoundboardCore
                 List<Keys> stopSoundKeys,
                 List<LoadXMLFile> loadXMLFiles,
                 Boolean minimizeToTray,
+                Boolean playOverEachother,
+                Boolean repeatOnHold,
+                Int32 delayInMs,
                 String lastPlaybackDevice,
                 String lastLoopbackDevice)
             {
@@ -76,6 +84,9 @@ namespace JNSoundboardCore
                 StopSoundKeys = stopSoundKeys;
                 LoadXMLFiles = loadXMLFiles;
                 MinimizeToTray = minimizeToTray;
+                PlayOverEachother = playOverEachother;
+                RepeatOnHold = repeatOnHold;
+                DelayInMs = delayInMs;
                 LastPlaybackDevice = lastPlaybackDevice;
                 LastLoopbackDevice = lastLoopbackDevice;
             }
@@ -165,6 +176,8 @@ namespace JNSoundboardCore
                 settings.LastPlaybackDevice ??= String.Empty;
 
                 settings.LastLoopbackDevice ??= String.Empty;
+
+                settings.DelayInMs ??= 500;
 
                 CurrentSettings = settings;
             }

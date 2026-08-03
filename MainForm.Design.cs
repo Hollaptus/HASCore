@@ -5,7 +5,7 @@ using System.ComponentModel;
 using Timer = System.Windows.Forms.Timer;
 using EventHandler = System.EventHandler;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     /// <summary>
     /// <see cref="MainForm"/> class part for implementing the initialization 
@@ -552,6 +552,7 @@ namespace JNSoundboardCore
             this.PlaybackDevicesComboBox.Name = "PlaybackDevicesComboBox";
             this.PlaybackDevicesComboBox.Size = new Size(240, 21);
             this.PlaybackDevicesComboBox.TabIndex = 10;
+            // this.PlaybackDevicesComboBox.SelectedIndexChanged += PlaybackDevicesComboBox_SelectedIndexChanged;
             // 
             // LoopbackDevicesComboBox
             // 
@@ -562,6 +563,7 @@ namespace JNSoundboardCore
             this.LoopbackDevicesComboBox.Name = "LoopbackDevicesComboBox";
             this.LoopbackDevicesComboBox.Size = new Size(240, 21);
             this.LoopbackDevicesComboBox.TabIndex = 11;
+            // this.LoopbackDevicesComboBox.SelectedIndexChanged += LoopbackDevicesComboBox_SelectedIndexChanged;
             // 
             // WindowsComboBox
             // 
@@ -664,9 +666,9 @@ namespace JNSoundboardCore
             // 
             this.NotificationIcon.BalloonTipIcon = ToolTipIcon.Info;
             this.NotificationIcon.BalloonTipText = "Minimized to the tray.";
-            this.NotificationIcon.BalloonTipTitle = "JN Soundboard Core";
+            this.NotificationIcon.BalloonTipTitle = "HAS Core";
             this.NotificationIcon.Icon = (Icon?)resources.GetObject("Notification.Icon");
-            this.NotificationIcon.Text = "JN Soundboard Core";
+            this.NotificationIcon.Text = "HAS Core";
             this.NotificationIcon.MouseClick += new MouseEventHandler(this.NotificationIcon_MouseClick);
             
             // Timers
@@ -693,7 +695,7 @@ namespace JNSoundboardCore
             this.Icon = (Icon?)resources.GetObject("$this.Icon");
             this.MinimumSize = new Size(610, 530);
             this.Name = "MainForm";
-            this.Text = "JN Soundboard Core";
+            this.Text = "HAS Core";
             this.MainMenuStrip = this.MenuStrip;
             
             // Adding the controls to the form

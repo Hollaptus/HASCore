@@ -5,7 +5,7 @@ using System.ComponentModel;
 using Timer = System.Windows.Forms.Timer;
 using EventHandler = System.EventHandler;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     /// <summary>
     /// <see cref="SettingsForm"/> class part for implementing the initialization 
@@ -19,14 +19,19 @@ namespace JNSoundboardCore
         private Container? Components = null;
         /// Description
         /// <summary>
+        ///     Label for <seealso cref="StopKeysTextBox">StopKeysTextBox</seealso>.
+        /// </summary>
+        private Label? StopKeysLabel;
+        /// Description
+        /// <summary>
         ///     Label for <seealso cref="ToggleKeysTextBox">ToggleKeysTextBox</seealso>.
         /// </summary>
         private Label? ToggleKeysLabel;
         /// Description
         /// <summary>
-        ///     Label for <seealso cref="StopKeysTextBox">StopKeysTextBox</seealso>.
+        ///     Label for <seealso cref="HoldDelayNumeric">HoldDelayNumeric</seealso>.
         /// </summary>
-        private Label? StopKeysLabel;
+        private Label? HoldDelayLabel;
         /// Description
         /// <summary>
         ///     Button for adding new XML file location of <see cref="XMLSettings"/> inside of 
@@ -70,14 +75,30 @@ namespace JNSoundboardCore
         private CheckBox? MinimizeToTrayCheckBox;
         /// Description
         /// <summary>
-        ///     Textbox for inputing the combination of keys to toggle the 'Enabled' flag.
-        /// </summary>
-        private TextBox? ToggleKeysTextBox;
+        ///     Checkbox for enabling the setting to play sounds over eachother instead of
+        ///     stopping the previous sound and playing a new one.
+        /// </summary> 
+        private CheckBox? PlayOverEachotherCheckBox;
+        /// Description
+        /// <summary>
+        ///     Checkbox for enabling the setting to repeat sounds on holding the hotkey.
+        /// </summary> 
+        private CheckBox? RepeatOnHoldCheckBox;
         /// Description
         /// <summary>
         ///     Textbox for inputing the combination of keys to stop all sounds from playing.
         /// </summary>
         private TextBox? StopKeysTextBox;
+        /// Description
+        /// <summary>
+        ///     Textbox for inputing the combination of keys to toggle the 'Enabled' flag.
+        /// </summary>
+        private TextBox? ToggleKeysTextBox;
+        /// Description
+        /// <summary>
+        ///     Spin box for inputing the delay in milliseconds for playing the new sound on holding the hotkey.
+        /// </summary>
+        private NumericUpDown? HoldDelayNumeric;
         /// Description
         /// <summary>
         ///     A header for displaying the name of the column 'Keys'
@@ -145,8 +166,9 @@ namespace JNSoundboardCore
             // Component container
             this.Components                 = new Container();
             // Labels
-            this.ToggleKeysLabel            = new Label();
             this.StopKeysLabel              = new Label();
+            this.ToggleKeysLabel            = new Label();
+            this.HoldDelayLabel             = new Label();
             // Buttons
             this.AddButton                  = new Button();
             this.EditButton                 = new Button();
@@ -157,9 +179,13 @@ namespace JNSoundboardCore
             this.GroupBox                   = new GroupBox();
             // Checkboxes
             this.MinimizeToTrayCheckBox     = new CheckBox();
+            this.PlayOverEachotherCheckBox  = new CheckBox();
+            this.RepeatOnHoldCheckBox       = new CheckBox();
             // Textboxes
-            this.ToggleKeysTextBox          = new TextBox();
             this.StopKeysTextBox            = new TextBox();
+            this.ToggleKeysTextBox          = new TextBox();
+            // Spinboxes
+            this.HoldDelayNumeric           = new NumericUpDown();
             // Column headers
             this.KeysColumnHeader           = new ColumnHeader();
             this.XMLLocationsColumnHeader   = new ColumnHeader();
@@ -183,22 +209,31 @@ namespace JNSoundboardCore
             // Labels
 
             // 
+            // StopKeysLabel
+            // 
+            this.StopKeysLabel.Name = "StopKeysLabel";
+            this.StopKeysLabel.Location = new Point(15, 15);
+            this.StopKeysLabel.Size = new Size(104, 13);
+            this.StopKeysLabel.AutoSize = true;
+            this.StopKeysLabel.TabIndex = 0;
+            this.StopKeysLabel.Text = "Stop all sounds keys";
+            // 
             // ToggleKeysLabel
             // 
-            this.ToggleKeysLabel.Location = new Point(8, 56);
+            this.ToggleKeysLabel.Location = new Point(15, 45);
             this.ToggleKeysLabel.Name = "ToggleKeysLabel";
             this.ToggleKeysLabel.Size = new Size(104, 16);
             this.ToggleKeysLabel.TabIndex = 2;
             this.ToggleKeysLabel.Text = "Enable Soundboard Hotkeys";
             // 
-            // StopKeysLabel
+            // HoldDelayLabel
             // 
-            this.StopKeysLabel.Name = "StopKeysLabel";
-            this.StopKeysLabel.Location = new Point(12, 15);
-            this.StopKeysLabel.Size = new Size(104, 13);
-            this.StopKeysLabel.AutoSize = true;
-            this.StopKeysLabel.TabIndex = 0;
-            this.StopKeysLabel.Text = "Stop all sounds keys";
+            this.HoldDelayLabel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            this.HoldDelayLabel.Location = new Point(310, 342);
+            this.HoldDelayLabel.Name = "HoldDelayLabel";
+            this.HoldDelayLabel.Size = new Size(50, 16);
+            this.HoldDelayLabel.TabIndex = 2;
+            this.HoldDelayLabel.Text = "ms delay";
 
             // Buttons
 
@@ -240,7 +275,7 @@ namespace JNSoundboardCore
             // 
             this.OKButton.Name = "OKButton";
             this.OKButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            this.OKButton.Location = new Point(337, 361);
+            this.OKButton.Location = new Point(325, 370);
             this.OKButton.Size = new Size(75, 23);
             this.OKButton.TabIndex = 7;
             this.OKButton.Text = "OK";
@@ -251,7 +286,7 @@ namespace JNSoundboardCore
             // 
             this.CancelButton.Name = "CancelButton";
             this.CancelButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            this.CancelButton.Location = new Point(424, 361);
+            this.CancelButton.Location = new Point(410, 370);
             this.CancelButton.Size = new Size(75, 23);
             this.CancelButton.TabIndex = 8;
             this.CancelButton.Text = "Cancel";
@@ -266,8 +301,8 @@ namespace JNSoundboardCore
             // 
             this.GroupBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             this.GroupBox.Name = "GroupBox";
-            this.GroupBox.Location = new Point(15, 120);
-            this.GroupBox.Size = new Size(472, 191);
+            this.GroupBox.Location = new Point(13, 70);
+            this.GroupBox.Size = new Size(472, 200);
             this.GroupBox.TabIndex = 1;
             this.GroupBox.TabStop = false;
             this.GroupBox.Text = "Load XML file with keys";
@@ -283,26 +318,37 @@ namespace JNSoundboardCore
             // 
             this.MinimizeToTrayCheckBox.Name = "MinimizeToTrayCheckBox";
             this.MinimizeToTrayCheckBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            this.MinimizeToTrayCheckBox.Location = new Point(15, 344);
-            this.MinimizeToTrayCheckBox.Size = new Size(216, 17);
+            this.MinimizeToTrayCheckBox.Location = new Point(15, 280);
+            this.MinimizeToTrayCheckBox.Size = new Size(215, 17);
             this.MinimizeToTrayCheckBox.AutoSize = true;
             this.MinimizeToTrayCheckBox.TabIndex = 5;
             this.MinimizeToTrayCheckBox.Text = "Minimize button sends application to tray";
             this.MinimizeToTrayCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // PlayOverEachotherCheckBox
+            // 
+            this.PlayOverEachotherCheckBox.Name = "PlayOverEachotherCheckBox";
+            this.PlayOverEachotherCheckBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            this.PlayOverEachotherCheckBox.Location = new Point(15, 310);
+            this.PlayOverEachotherCheckBox.Size = new Size(215, 17);
+            this.PlayOverEachotherCheckBox.AutoSize = true;
+            this.PlayOverEachotherCheckBox.TabIndex = 5;
+            this.PlayOverEachotherCheckBox.Text = "Allow playing sounds over eachother";
+            this.PlayOverEachotherCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // RepeatOnHoldCheckBox
+            // 
+            this.RepeatOnHoldCheckBox.Name = "RepeatOnHoldCheckBox";
+            this.RepeatOnHoldCheckBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            this.RepeatOnHoldCheckBox.Location = new Point(15, 340);
+            this.RepeatOnHoldCheckBox.Size = new Size(215, 17);
+            this.RepeatOnHoldCheckBox.AutoSize = true;
+            this.RepeatOnHoldCheckBox.TabIndex = 5;
+            this.RepeatOnHoldCheckBox.Text = "Allow repeating sounds on holding the hotkey";
+            this.RepeatOnHoldCheckBox.UseVisualStyleBackColor = true;
 
             // Textboxes
             
-            // 
-            // ToggleKeysTextBox
-            //
-            this.ToggleKeysTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right; 
-            this.ToggleKeysTextBox.Location = new Point(120, 48);
-            this.ToggleKeysTextBox.Name = "ToggleKeysTextBox";
-            this.ToggleKeysTextBox.ReadOnly = true;
-            this.ToggleKeysTextBox.Size = new Size(368, 24);
-            this.ToggleKeysTextBox.TabIndex = 1;
-            this.ToggleKeysTextBox.Enter += new EventHandler(this.ToggleKeysTextBox_Enter);
-            this.ToggleKeysTextBox.Leave += new EventHandler(this.ToggleKeysTextBox_Leave);
             // 
             // StopKeysTextBox
             // 
@@ -314,6 +360,32 @@ namespace JNSoundboardCore
             this.StopKeysTextBox.TabIndex = 0;
             this.StopKeysTextBox.Enter += new EventHandler(this.StopKeysTextBox_Enter);
             this.StopKeysTextBox.Leave += new EventHandler(this.StopKeysTextBox_Leave);
+            // 
+            // ToggleKeysTextBox
+            //
+            this.ToggleKeysTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right; 
+            this.ToggleKeysTextBox.Location = new Point(122, 42);
+            this.ToggleKeysTextBox.Name = "ToggleKeysTextBox";
+            this.ToggleKeysTextBox.ReadOnly = true;
+            this.ToggleKeysTextBox.Size = new Size(365, 20);
+            this.ToggleKeysTextBox.TabIndex = 1;
+            this.ToggleKeysTextBox.Enter += new EventHandler(this.ToggleKeysTextBox_Enter);
+            this.ToggleKeysTextBox.Leave += new EventHandler(this.ToggleKeysTextBox_Leave);
+
+            // Spinboxes
+
+            // 
+            // HoldDelayNumeric
+            //
+            this.HoldDelayNumeric.Anchor = AnchorStyles.Bottom | AnchorStyles.Left; 
+            this.HoldDelayNumeric.Location = new Point(250, 340);
+            this.HoldDelayNumeric.Name = "HoldDelayNumeric";
+            this.HoldDelayNumeric.Size = new Size(60, 24);
+            this.HoldDelayNumeric.TabIndex = 1;
+            this.HoldDelayNumeric.Minimum = 50;
+            this.HoldDelayNumeric.Maximum = 1000;
+            this.HoldDelayNumeric.Value = 500;
+            this.HoldDelayNumeric.Enabled = false;
 
             // Column headers
 
@@ -367,22 +439,26 @@ namespace JNSoundboardCore
             this.AcceptButton = this.OKButton;
             this.AutoScaleDimensions = new SizeF(6F, 13F);
             this.AutoScaleMode = AutoScaleMode.Font;
-            this.ClientSize = new Size(499, 304);
+            this.Size = new Size(525, 425);
+            this.ClientSize = new Size(495, 395);
+            this.MinimumSize = new Size(390, 425);
             this.Icon = (Icon?)resources.GetObject("$this.Icon");
-            this.MinimumSize = new Size(296, 277);
             this.Name = "SettingsForm";
             this.Text = "Soundboard Settings";
-            this.Size = new Size(512, 424);
 
             // Adding the controls to the form
             this.Controls.Add(this.ToggleKeysLabel);
             this.Controls.Add(this.StopKeysLabel);
+            this.Controls.Add(this.HoldDelayLabel);
             this.Controls.Add(this.OKButton);
             this.Controls.Add(this.CancelButton);
             this.Controls.Add(this.GroupBox);
             this.Controls.Add(this.MinimizeToTrayCheckBox);
+            this.Controls.Add(this.PlayOverEachotherCheckBox);
+            this.Controls.Add(this.RepeatOnHoldCheckBox);
             this.Controls.Add(this.ToggleKeysTextBox);
             this.Controls.Add(this.StopKeysTextBox);
+            this.Controls.Add(this.HoldDelayNumeric);
 
             // After initializing all the objects and their properties,
             // we need to resume layout logic and apply it forcibly

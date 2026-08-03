@@ -9,6 +9,7 @@
     <LangVersion>latest</LangVersion>
     <EnableLibraryImportGenerator>true</EnableLibraryImportGenerator>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>hasc-icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

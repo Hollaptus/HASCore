@@ -1,8 +1,8 @@
 ﻿// Declaring the using statement so we don't have to always prepend
 // 'XMLSettings' to an already static fields of the class.
-using static JNSoundboardCore.XMLSettings;
+using static HASCore.XMLSettings;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     /// Description
     /// <summary>
@@ -55,10 +55,17 @@ namespace JNSoundboardCore
             // Checking if there are any hotkeys mapped to specific actions.
             ToggleKeysTextBox?.Text = Helper.KeysToString(CurrentSettings?.EnableSoundboardKeys ?? []);
             StopKeysTextBox?.Text = Helper.KeysToString(CurrentSettings?.StopSoundKeys ?? []);
-            // Also checking if the minimize to tray function is enabled.
+
+            // Also checking if there are any settings checked.
             MinimizeToTrayCheckBox?.Checked = CurrentSettings is not null 
                 && CurrentSettings.MinimizeToTray.HasValue 
                 && CurrentSettings.MinimizeToTray.Value;
+            PlayOverEachotherCheckBox?.Checked = CurrentSettings is not null 
+                && CurrentSettings.PlayOverEachother.HasValue 
+                && CurrentSettings.PlayOverEachother.Value;
+            RepeatOnHoldCheckBox?.Checked = CurrentSettings is not null 
+                && CurrentSettings.RepeatOnHold.HasValue 
+                && CurrentSettings.RepeatOnHold.Value;
         }
 
         /// Description
@@ -169,8 +176,10 @@ namespace JNSoundboardCore
                 {
                     // Trying to get array of Keys, and if we encounter an error,
                     // we throw an exception with the error specified.
-                    if (!Helper.KeysArrayFromString(StopKeysTextBox?.Text, out stopKeysArr, out error)
-                    || !Helper.KeysArrayFromString(ToggleKeysTextBox?.Text, out toggleKeysArr, out error))
+                    if ((!String.IsNullOrEmpty(StopKeysTextBox?.Text) 
+                        && !Helper.KeysArrayFromString(StopKeysTextBox?.Text, out stopKeysArr, out error))
+                        || (!String.IsNullOrEmpty(ToggleKeysTextBox?.Text) 
+                        && !Helper.KeysArrayFromString(ToggleKeysTextBox?.Text, out toggleKeysArr, out error)))
                         throw new ArgumentException("Keys mismatch");
                     
                     // Assigning values to the fields of settings.
@@ -178,6 +187,8 @@ namespace JNSoundboardCore
                     CurrentSettings.StopSoundKeys = stopKeysArr ?? [];
                     CurrentSettings.LoadXMLFiles = [.. LoadXMLFilesList];
                     CurrentSettings.MinimizeToTray = MinimizeToTrayCheckBox?.Checked ?? false;
+                    CurrentSettings.PlayOverEachother = PlayOverEachotherCheckBox?.Checked ?? false;
+                    CurrentSettings.RepeatOnHold = RepeatOnHoldCheckBox?.Checked ?? false;
                     
                     // Calling the procedure to save changes.
                     SaveSoundboardSettingsXML();
@@ -291,6 +302,12 @@ namespace JNSoundboardCore
                 LastAmountPressed = 0;
                 // Clearing the input.
                 StopKeysTextBox?.Text = String.Empty;
+                // If the StopKeysTextBoxes is in focus - then we clear the input there.
+                if (StopKeysTextBox is not null && StopKeysTextBox.Focused) 
+                    StopKeysTextBox.Text = String.Empty;
+                // Same for the ToggleKeysTextBox.
+                if (ToggleKeysTextBox is not null && ToggleKeysTextBox.Focused) 
+                    ToggleKeysTextBox.Text = String.Empty;
             }
             else
             {

@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JNSoundboardCore", "JNSoundboardCore.csproj", "{BB9783C1-E228-E8BF-E2ED-0B178C522E20}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HASCore", "HASCore.csproj", "{BB9783C1-E228-E8BF-E2ED-0B178C522E20}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

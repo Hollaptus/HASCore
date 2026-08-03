@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     public class Keyboard
     {
@@ -60,33 +60,25 @@ namespace JNSoundboardCore
         }
 
         [DllImport("user32.dll", SetLastError = true)]
-        private static extern short GetKeyState(ushort virtualKeyCode);
-
-        [DllImport("user32.dll")]
-        private static extern bool GetKeyboardState(Byte[] lpKeyState);
+        private static extern short GetAsyncKeyState(byte virtualKeyCode);
 
         internal static bool IsKeyDown(Keys keyCode)
         {
-            short keyState = GetKeyState((ushort)keyCode);
+            short keyState = GetAsyncKeyState((byte)keyCode);
             return keyState < 0;
         }
-
-        /// <summary>Returns the List of currently pressed keys.</summary>
+        
         public static List<Keys> GetPressedKeys()
         {
-            Byte[] state = new Byte[256];
-            if (!GetKeyboardState(state))
-                return [];
+            List<Keys> pressedKeys = [];
             
-            List<Keys> pressed = [];
-            for (int i = 0; i < 256; i++)
-            {
-                if ((state[i] & 0x80) != 0)  // MSB (Most Significant Bit) is set - the key is pressed
-                {
-                    pressed.Add((Keys)i);
-                }
-            }
-            return pressed;
+            // Iterating through all the possible keys.
+            for (byte keyCode = 0; keyCode < 255; keyCode++) 
+                // MSB (Most Significant Bit) is set - the key is pressed
+                if ((GetAsyncKeyState(keyCode) & 0x8000) != 0) 
+                    pressedKeys.Add((Keys)keyCode);
+                
+            return pressedKeys;
         }
         
         [DllImport("user32.dll", SetLastError = true)]

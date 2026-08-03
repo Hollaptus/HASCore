@@ -1,4 +1,4 @@
-﻿namespace JNSoundboardCore
+﻿namespace HASCore
 {
     static class Program
     {

@@ -1,6 +1,6 @@
 ﻿using NAudio.Wave;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     class CachedSoundSampleProvider : ISampleProvider
     {

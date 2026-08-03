@@ -1,7 +1,7 @@
 ﻿using System.Speech.Synthesis;
-using static JNSoundboardCore.AddEditHotkeyForm;
+using static HASCore.AddEditHotkeyForm;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     public partial class TextToSpeechForm : Form
     {

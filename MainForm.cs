@@ -3,9 +3,9 @@ using System.Diagnostics;
 using NAudio.Wave;
 // Declaring the using statement so we don't have to always prepend
 // 'XMLSettings' to an already static fields of the class.
-using static JNSoundboardCore.XMLSettings;
+using static HASCore.XMLSettings;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     /// Description
     /// <summary>
@@ -56,16 +56,19 @@ namespace JNSoundboardCore
             LoadSoundboardSettingsXML();
 
             // Also checking if the devices haven't changed since last launch: 
-            if (PlaybackDevicesComboBox is not null && PlaybackDevicesComboBox.Items.Contains(CurrentSettings.LastPlaybackDevice))
+            if (PlaybackDevicesComboBox is not null)
             {
-                // We select the item that has been as default playback device last time
-                PlaybackDevicesComboBox.SelectedItem = CurrentSettings.LastPlaybackDevice;
-                // Also adding the event handler for changes in the index of selected item in the combobox
+                // We select the item that has been as default playback device last time.
+                if (PlaybackDevicesComboBox.Items.Contains(CurrentSettings.LastPlaybackDevice))
+                    PlaybackDevicesComboBox.SelectedItem = CurrentSettings.LastPlaybackDevice;
+                // Also adding the event handler for changes in the index of selected item in the combobox.
                 PlaybackDevicesComboBox.SelectedIndexChanged += PlaybackDevicesComboBox_SelectedIndexChanged;
             }
-            if (LoopbackDevicesComboBox is not null && LoopbackDevicesComboBox.Items.Contains(CurrentSettings.LastLoopbackDevice)) 
+            if (LoopbackDevicesComboBox is not null) 
             {
-                LoopbackDevicesComboBox.SelectedItem = CurrentSettings.LastLoopbackDevice;
+                // Same for loopback.
+                if (LoopbackDevicesComboBox.Items.Contains(CurrentSettings.LastLoopbackDevice))
+                    LoopbackDevicesComboBox.SelectedItem = CurrentSettings.LastLoopbackDevice;
                 LoopbackDevicesComboBox.SelectedIndexChanged += LoopbackDevicesComboBox_SelectedIndexChanged;
             }
 
@@ -111,15 +114,15 @@ namespace JNSoundboardCore
             try
             {
                 // We are checking if the combobox has been initialized just in case,
-                // the controls should be initialized by now
+                // the controls should be initialized by now.
                 if (WindowsComboBox is not null)
                 {
-                    // Clearing the items and adding the 'Any window' option
+                    // Clearing the items and adding the 'Any window' option.
                     WindowsComboBox.Items.Clear();
                     WindowsComboBox.Items.Add("[Any window]");
                     WindowsComboBox.SelectedIndex = 0;
 
-                    // Getting all the processes currently running and adding to the list
+                    // Getting all the processes currently running and adding to the list.
                     foreach (Process process in Process.GetProcesses())
                         if (!String.IsNullOrEmpty(process.MainWindowTitle))
                             WindowsComboBox.Items.Add(process.MainWindowTitle);
@@ -139,35 +142,35 @@ namespace JNSoundboardCore
             try
             {
                 // We are checking if the comboboxes have been initialized just in case,
-                // the controls should be initialized by now
+                // the controls should be initialized by now.
                 if (PlaybackDevicesComboBox?.Items is not null && LoopbackDevicesComboBox?.Items is not null)
                 {
                     List<WaveOutCapabilities> playbackSources = [];
                     List<WaveInCapabilities> loopbackSources = [];
                     
                     // Iterating through audio devices and 
-                    // adding them to their respective lists
+                    // adding them to their respective lists.
                     for (Int32 i = 0; i < WaveOut.DeviceCount; i++)
                         playbackSources.Add(WaveOut.GetCapabilities(i));
 
                     for (Int32 i = 0; i < WaveIn.DeviceCount; i++)
                         loopbackSources.Add(WaveIn.GetCapabilities(i));
                     
-                    // Clearing the list of items inside the comboboxes
+                    // Clearing the list of items inside the comboboxes.
                     PlaybackDevicesComboBox.Items.Clear();
                     LoopbackDevicesComboBox.Items.Clear();
 
-                    // Adding the playback devices from audio devices capabilities list
+                    // Adding the playback devices from audio devices capabilities list.
                     foreach (WaveOutCapabilities source in playbackSources)
                         PlaybackDevicesComboBox.Items.Add(source.ProductName);
                     
-                    // Setting the index if there are any items
+                    // Setting the index if there are any items.
                     if (PlaybackDevicesComboBox.Items.Count > 0)
                         PlaybackDevicesComboBox.SelectedIndex = 0;
-                    // And adding an empty entry
+                    // And adding an empty entry.
                     LoopbackDevicesComboBox.Items.Add(String.Empty);
 
-                    // Doing the same for loopback devices
+                    // Doing the same for loopback devices.
                     foreach (WaveInCapabilities source in loopbackSources)
                         LoopbackDevicesComboBox.Items.Add(source.ProductName);
 
@@ -187,35 +190,35 @@ namespace JNSoundboardCore
         {
             try
             {
-                // Stopping loopback if it is used right now
+                // Stopping loopback if it is used right now.
                 StopLoopback();
                 // We are checking if the combobox has been initialized just in case,
-                // the controls should be initialized by now
+                // the controls should be initialized by now.
                 if (LoopbackDevicesComboBox is not null)
                 {
                     Int32 deviceNumber = LoopbackDevicesComboBox.SelectedIndex - 1;
 
-                    // Setting the parameters of the loopback stream
+                    // Setting the parameters of the loopback stream.
                     LoopbackSourceStream ??= new WaveIn();
                     LoopbackSourceStream.DeviceNumber = deviceNumber;
                     LoopbackSourceStream.WaveFormat = new WaveFormat(44100, WaveIn.GetCapabilities(deviceNumber).Channels);
                     LoopbackSourceStream.BufferMilliseconds = 25;
                     LoopbackSourceStream.NumberOfBuffers = 5;
                     LoopbackSourceStream.DataAvailable += LoopbackSourceStream_DataAvailable;
-                    // Setting the parameters of the provider
+                    // Setting the parameters of the provider.
                     LoopbackWaveProvider = new BufferedWaveProvider(LoopbackSourceStream.WaveFormat)
                     {
                         DiscardOnBufferOverflow = true
                     };
-                    // Setting the parameters of the output
+                    // Setting the parameters of the output.
                     LoopbackWaveOut ??= new WaveOut();
                     LoopbackWaveOut.DeviceNumber = LoopbackDevicesComboBox.SelectedIndex;
                     LoopbackWaveOut.DesiredLatency = 125;
-                    // Initialize output based on the provider
+                    // Initialize output based on the provider.
                     LoopbackWaveOut.Init(LoopbackWaveProvider);
-                    // Record what is gonna be looped backed
+                    // Record what is gonna be looped backed.
                     LoopbackSourceStream.StartRecording();
-                    // Play it out on the output
+                    // Play it out on the output.
                     LoopbackWaveOut.Play();
                 }
                 else throw new NullReferenceException("Loopback devices list hasn't been initialized");
@@ -232,13 +235,13 @@ namespace JNSoundboardCore
         {
             try
             {
-                // Clearing resources
+                // Clearing resources.
                 LoopbackWaveOut?.Stop();
                 LoopbackWaveOut?.Dispose();
                 LoopbackWaveProvider?.ClearBuffer();
                 LoopbackSourceStream?.StopRecording();
                 LoopbackSourceStream?.Dispose();
-                // Setting the values of objects to null reference
+                // Setting the values of objects to null reference.
                 LoopbackWaveOut = null;
                 LoopbackWaveProvider = null;
                 LoopbackSourceStream = null;
@@ -270,7 +273,7 @@ namespace JNSoundboardCore
         {
             // We try to read the settings in the specified path, if the file
             // is an XML file that can be serialized as Settings class and its
-            // contents are not empty, we parse the entries and load them
+            // contents are not empty, we parse the entries and load them.
             if (ReadXML(typeof(Settings), path) is Settings settings 
                 && settings.SoundHotkeys is not null 
                 && settings.SoundHotkeys.Count > 0)
@@ -312,26 +315,26 @@ namespace JNSoundboardCore
                     if (!String.IsNullOrEmpty(keys) && items.Count > 0 && items[^1].Text == keys && !sameKeys.Contains(keys))
                         sameKeys += (sameKeys != String.Empty ? ", " : String.Empty) + keys;
 
-                    // Adding a new item for a ListView
+                    // Adding a new item for a ListView.
                     ListViewItem tempItem = new(keys);
                     tempItem.SubItems.Add(hotkey.WindowTitle);
                     tempItem.SubItems.Add(Helper.SoundLocsArrayToString(hotkey.SoundLocations));
                     
-                    // Then appending to the end of the list of items
+                    // Then appending to the end of the list of items.
                     items.Add(tempItem);
                 }
 
-                // If there are any items, we add them to the ListView
+                // If there are any items, we add them to the ListView.
                 if (items.Count > 0)
                 {
-                    // Also if there were any errors, we show them to the user
+                    // Also if there were any errors, we show them to the user.
                     if (!String.IsNullOrEmpty(errors))
                         MessageBox.Show(errors);
 
                     if (!String.IsNullOrEmpty(sameKeys))
                         MessageBox.Show("Multiple entries using the same keys. The keys being used multiple times are: " + sameKeys);
 
-                    // Clearing the lists and adding the new values
+                    // Clearing the lists and adding the new values.
                     SoundHotkeys.Clear();
                     SoundHotkeys.AddRange(settings.SoundHotkeys);
                     KeySoundsListView?.Items.Clear();
@@ -343,7 +346,7 @@ namespace JNSoundboardCore
                     KeysColumnHeader?.Width = -2;
                     SoundLocationColumnHeader?.Width = -2;
 
-                    // Setting the field to current XML file path for saving the changes
+                    // Setting the field to current XML file path for saving the changes.
                     XMLLocation = path;
                 }
                 else
@@ -363,17 +366,17 @@ namespace JNSoundboardCore
         {
             // If there are any selected items in the ListView,
             // we create the edit form and pass the parameters
-            // of the contents and index of selected item
+            // of the contents and index of selected item.
             if (KeySoundsListView?.SelectedItems.Count > 0)
             {
                 // Get the first available item
                 ListViewItem item = KeySoundsListView.SelectedItems[0];
 
-                // Create a new instance of the form and run dialog
+                // Create a new instance of the form and run dialog.
                 new AddEditHotkeyForm
                 {
                     // Get its contents and index and write their values
-                    // to the fields of what we are editing
+                    // to the fields of what we are editing.
                     EditStrings = [item.Text, item.SubItems[1].Text, item.SubItems[2].Text],
                     EditIndex = KeySoundsListView.SelectedIndices[0]
                 }.ShowDialog();
@@ -393,7 +396,7 @@ namespace JNSoundboardCore
         private void UpdateToolStripMenuItem_Click(Object? sender, EventArgs? e)
         {
             using Process process = new();
-            process.StartInfo.FileName = "https://github.com/Hollaptus/JNSoundboardCore/releases";
+            process.StartInfo.FileName = "https://github.com/Hollaptus/HASCore/releases";
             process.StartInfo.UseShellExecute = true;
             process.Start();
         }
@@ -477,13 +480,13 @@ namespace JNSoundboardCore
                 WriteXML(new Settings(SoundHotkeys), XMLLocation);
                 MessageBox.Show($"Saved as:\n{XMLLocation}");
             }
-            // Otherwise, we show a message that file hasn't been saved
+            // Otherwise, we show a message that file hasn't been saved.
             else MessageBox.Show("Location was empty, file hasn't been saved!");
         }
 
         private void ReloadDevicesButton_Click(Object? sender, EventArgs? e)
         {
-            // Stopping all current sounds and reloading the devices
+            // Stopping all current sounds and reloading the devices.
             StopPlayback();
             StopLoopback();
             LoadSoundDevices();
@@ -491,21 +494,21 @@ namespace JNSoundboardCore
 
         private void EnableCheckBox_CheckedChanged(Object? sender, EventArgs? e)
         {
-            // If the checkbox is enabled - set the timer and start loopback 
+            // If the checkbox is enabled - set the timer and start loopback.
             if (EnableCheckBox?.Checked == true)
             {
-                // If there are any settings or hotkeys - enable the timer
+                // If there are any settings or hotkeys - enable the timer.
                 if ((SoundHotkeys != null && SoundHotkeys.Count > 0) 
                 || (CurrentSettings.LoadXMLFiles != null && CurrentSettings.LoadXMLFiles.Count > 0))
                     MainTimer?.Enabled = true;
-                // Otherwise, disable it
+                // Otherwise, disable it.
                 else EnableCheckBox.Checked = false;
 
-                // Start the loopback if there are any devices and soundboard is enabled
+                // Start the loopback if there are any devices and soundboard is enabled.
                 if (EnableCheckBox.Checked && PlaybackDevicesComboBox?.Items.Count > 0 && LoopbackDevicesComboBox?.SelectedIndex > 0)
                     StartLoopback();
             }
-            // Otherwise, stop all sounds and dispose of objects
+            // Otherwise, stop all sounds and dispose of objects.
             else
             {
                 StopPlayback();
@@ -515,65 +518,42 @@ namespace JNSoundboardCore
 
         private void KeySoundsListView_MouseDoubleClick(Object? sender, MouseEventArgs? e) => EditSelectedSoundHotkey();
         
+        private bool WasHotkeyPressedBefore(List<Keys> currentPressed, List<Keys> sequence) => 
+            currentPressed.SequenceEqual(sequence) && !KeysJustPressed?.SequenceEqual(sequence) == true;
+
         private void MainTimer_Tick(Object? sender, EventArgs? e)
         {
             List<Keys> keysPressed = Keyboard.GetPressedKeys();
-            Int32 keysPressedCount = 0;
+            if (keysPressed.Count == 0) return;
 
-            // Check that required keys are pressed to enable soundboard.
-            if (CurrentSettings.EnableSoundboardKeys?.Count > 0) 
+            // Check that required keys are pressed to enable or disable the soundboard.
+            if (CurrentSettings.EnableSoundboardKeys?.Count > 0
+                && WasHotkeyPressedBefore(keysPressed, CurrentSettings.EnableSoundboardKeys))
             {
-                foreach (Keys key in CurrentSettings.EnableSoundboardKeys)
-                    if (keysPressed.Contains(key)) keysPressedCount++;
-                
-                // for (Int32 i = 0; i < CurrentSettings.EnableSoundboardKeys.Count; i++)
-                //     if (Keyboard.IsKeyDown(CurrentSettings.EnableSoundboardKeys[i])) keysPressedCount++;
-                
-                if (keysPressedCount == CurrentSettings.EnableSoundboardKeys.Count 
-                && (KeysJustPressed == null || !KeysJustPressed.Intersect(CurrentSettings.EnableSoundboardKeys).Any()))
-                {
-                    EnableCheckBox?.Checked ^= true;
-
-                    KeysJustPressed = CurrentSettings.EnableSoundboardKeys;
-
-                    return;
-                }
-                else if (KeysJustPressed == CurrentSettings.EnableSoundboardKeys)
-                    KeysJustPressed = null;
-
-                keysPressedCount = 0;
+                EnableCheckBox?.Checked ^= true;
+                KeysJustPressed = keysPressed;
+                return;
             }
 
             if (EnableCheckBox?.Checked == true)
             {
-                if (SoundHotkeys.Count > 0) //check that required keys are pressed to play sound
+                // Check that required keys are pressed to play a sound.
+                if (SoundHotkeys.Count > 0) 
                 {
                     IntPtr foregroundWindow = Helper.GetForegroundWindow();
 
-                    for (Int32 i = 0; i < SoundHotkeys.Count; i++)
+                    foreach (SoundHotkey hotkey in SoundHotkeys)
                     {
-                        keysPressedCount = 0;
-
-                        if (SoundHotkeys[i].Keys?.Count == 0
-                            || (SoundHotkeys[i].WindowTitle != String.Empty 
-                            && !Helper.IsForegroundWindow(SoundHotkeys[i].WindowTitle, foregroundWindow)))
+                        if (hotkey.Keys?.Count == 0
+                            || (hotkey.WindowTitle != String.Empty 
+                            && !Helper.IsForegroundWindow(hotkey.WindowTitle, foregroundWindow)))
                             continue;
 
-                        // for (Int32 j = 0; j < SoundHotkeys[i].Keys?.Count; j++)
-                        //     if (Keyboard.IsKeyDown(SoundHotkeys[i].Keys![j]))
-                        //         keysPressedCount++;
-                        if (SoundHotkeys[i].Keys != null)
-                            foreach (Keys key in SoundHotkeys[i]?.Keys!)
-                                if (keysPressed.Contains(key)) keysPressedCount++;
-
-                        if (keysPressedCount == SoundHotkeys[i].Keys?.Count)
+                        if (keysPressed.Count > 0 && keysPressed.Count == hotkey.Keys?.Count)
                         {
-                            if (KeysJustPressed == SoundHotkeys[i].Keys) continue;
+                            if (keysPressed.Except(hotkey.Keys).Any()) continue;
 
-                            if (SoundHotkeys[i].Keys?.Count > 0 
-                                && SoundHotkeys[i].Keys!.All(x => x != 0) 
-                                && SoundHotkeys[i].SoundLocations?.Count > 0 
-                                && SoundHotkeys[i].SoundLocations!.Any(x => File.Exists(x)))
+                            if (hotkey.Keys.All(x => x != 0) && hotkey.SoundLocations.Any(x => File.Exists(x)))
                             {
                                 if (EnablePushToTalkCheckBox?.Checked == true 
                                     && !KeyUpPushToTalkKey 
@@ -585,69 +565,49 @@ namespace JNSoundboardCore
                                     Boolean result = Keyboard.SendKey(PushToTalkKey, true);
                                     Thread.Sleep(100);
                                 }
-
-                                PlayKeySound(SoundHotkeys[i]);
-                                return;
-                            }
-                        }
-                        else if (KeysJustPressed == SoundHotkeys[i].Keys) KeysJustPressed = null;
-                    }
-
-                    keysPressedCount = 0;
-                }
-
-                if (CurrentSettings.StopSoundKeys != null && CurrentSettings.StopSoundKeys.Count > 0) //check that required keys are pressed to stop all sounds
-                {
-                    for (Int32 i = 0; i < CurrentSettings.StopSoundKeys.Count; i++)
-                        if (Keyboard.IsKeyDown(CurrentSettings.StopSoundKeys[i])) keysPressedCount++;
-                    
-                    if (keysPressedCount == CurrentSettings.StopSoundKeys.Count)
-                        if (KeysJustPressed == null || !KeysJustPressed.Intersect(CurrentSettings.StopSoundKeys).Any())
-                        {
-                            StopPlayback();
-
-                            KeysJustPressed = CurrentSettings.StopSoundKeys;
-
-                            return;
-                        }
-                    else if (KeysJustPressed == CurrentSettings.StopSoundKeys)
-                        KeysJustPressed = null;
-
-                    keysPressedCount = 0;
-                }
-
-                if (CurrentSettings.LoadXMLFiles != null && CurrentSettings.LoadXMLFiles.Count > 0) //check that required keys are pressed to load XML file
-                {
-                    for (Int32 i = 0; i < CurrentSettings.LoadXMLFiles.Count; i++)
-                    {
-                        if (CurrentSettings.LoadXMLFiles[i].Keys?.Count == 0) continue;
-
-                        keysPressedCount = 0;
-
-                        for (Int32 j = 0; j < CurrentSettings.LoadXMLFiles[i].Keys?.Count; j++)
-                            if (Keyboard.IsKeyDown(CurrentSettings.LoadXMLFiles[i].Keys![j])) keysPressedCount++;
-                        
-                        if (keysPressedCount == CurrentSettings.LoadXMLFiles[i].Keys?.Count)
-                        {
-                            if (KeysJustPressed == null || !KeysJustPressed.Intersect(CurrentSettings.LoadXMLFiles[i].Keys!).Any())
-                            {
-                                if (!String.IsNullOrWhiteSpace(CurrentSettings.LoadXMLFiles[i].XMLLocation) && File.Exists(CurrentSettings.LoadXMLFiles[i].XMLLocation))
+                                
+                                if (CurrentSettings.RepeatOnHold == true 
+                                    || !hotkey.LastPlayTime.HasValue
+                                    || (CurrentSettings.RepeatOnHold == false
+                                    && hotkey.LastPlayTime.HasValue 
+                                    && (DateTime.Now - hotkey.LastPlayTime.Value).TotalMilliseconds >= CurrentSettings.DelayInMs))
                                 {
-                                    KeysJustPressed = CurrentSettings.LoadXMLFiles[i].Keys;
-
-                                    LoadXMLFile(CurrentSettings.LoadXMLFiles[i].XMLLocation!);
+                                    if (CurrentSettings.PlayOverEachother == false)
+                                        StopPlayback();   
+                                    PlayKeySound(hotkey);
                                 }
 
+                                hotkey.LastPlayTime = DateTime.Now;
+                                KeysJustPressed = keysPressed;
                                 return;
                             }
                         }
-                        else if (KeysJustPressed == CurrentSettings.LoadXMLFiles[i].Keys)
+                    }
+                }
+
+                // Check that required keys are pressed to stop all sounds.
+                if (CurrentSettings.StopSoundKeys?.Count > 0 
+                    && WasHotkeyPressedBefore(keysPressed, CurrentSettings.StopSoundKeys))
+                {
+                    StopPlayback();
+                    KeysJustPressed = keysPressed;
+                    return;
+                }
+                
+                // Check that required keys are pressed to load an XML file.
+                if (CurrentSettings.LoadXMLFiles?.Count > 0) 
+                {
+                    foreach (LoadXMLFile file in CurrentSettings.LoadXMLFiles)
+                    {
+                        if (file.Keys?.Count == 0) continue;
+                        else if (WasHotkeyPressedBefore(keysPressed, file.Keys!))
                         {
-                            KeysJustPressed = null;
+                            if (File.Exists(file.XMLLocation))
+                                LoadXMLFile(file.XMLLocation);
+                            KeysJustPressed = keysPressed;
+                            return;
                         }
                     }
-
-                    keysPressedCount = 0;
                 }
 
                 if (KeyUpPushToTalkKey)
@@ -660,7 +620,8 @@ namespace JNSoundboardCore
                         Keyboard.SendKey(PushToTalkKey, false);
                     }
                 }
-            }
+            }    
+            KeysJustPressed = keysPressed.Count > 0 ? keysPressed : null;
         }
 
         private void PlayKeySound(SoundHotkey currentKeysSounds)

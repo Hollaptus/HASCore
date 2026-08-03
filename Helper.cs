@@ -2,7 +2,7 @@
 // on the partial functions that are being imported from system.
 using System.Runtime.InteropServices;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     /// Description
     /// <summary>

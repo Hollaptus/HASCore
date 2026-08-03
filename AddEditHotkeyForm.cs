@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Diagnostics;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     public partial class AddEditHotkeyForm : Form
     {

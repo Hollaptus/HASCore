@@ -1,7 +1,7 @@
 ﻿using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     class AudioPlaybackEngine : IDisposable
     {
