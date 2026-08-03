@@ -1,7 +1,7 @@
 ﻿using System.Speech.Synthesis;
-using static JNSoundboardCore.AddEditHotkeyForm;
+using static HASCore.AddEditHotkeyForm;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     public partial class TextToSpeechForm : Form
     {
@@ -65,7 +65,7 @@ namespace JNSoundboardCore
                         XMLSettings.SoundHotkey newSH = new(convertedKeys, "", [tbWhereSave.Text + "\\" + Helper.CleanFileName(tbText.Text.Replace(" ", "") + ".wav")]);
 
                         Synth = new SpeechSynthesizer();
-                        Synth.SetOutputToWaveFile(newSH.SoundLocations?[0]);
+                        Synth.SetOutputToWaveFile(newSH.SoundLocations[0]);
 
                         PromptBuilder builder = new();
                         builder.AppendText(tbText.Text);
@@ -79,7 +79,7 @@ namespace JNSoundboardCore
 
                         ListViewItem newItem = new(tbKeys.Text);
                         newItem.SubItems.Add(""); //window title
-                        newItem.SubItems.Add(newSH.SoundLocations?[0]);
+                        newItem.SubItems.Add(newSH.SoundLocations[0]);
 
                         MainForm?.KeySoundsListView?.Items.Add(newItem);
 
@@ -94,7 +94,7 @@ namespace JNSoundboardCore
                             else return Helper.KeysToString(x.Keys).CompareTo(Helper.KeysToString(y.Keys));
                         });
 
-                        MessageBox.Show("File saved to " + newSH.SoundLocations?[0]);
+                        MessageBox.Show("File saved to " + newSH.SoundLocations[0]);
                     }
                 }
                 else

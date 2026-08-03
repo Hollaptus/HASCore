@@ -2,7 +2,7 @@
 // on the partial functions that are being imported from system.
 using System.Runtime.InteropServices;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     /// Description
     /// <summary>
@@ -245,29 +245,14 @@ namespace JNSoundboardCore
         /// </summary>
         /// <param name="keysList"></param>
         /// <returns></returns>
-        internal static String KeysToString(params List<Keys>? keysList)
-        {
-            // If the list is empty, we cannot convert anything, return an empty string.
-            if (keysList is null) return String.Empty;
-            
-            // String temp = "";
-            // Int32 kLen = keysList.Count;
-
-            // for (Int32 i = 0; i < kLen; i++)
-            // {   
-            //     temp += keysList[i].ToString() + (i == kLen - 1 ? "" : "+");
-            // }
-
-            // return temp;
-            return String.Join('+', keysList);
-        }
-
+        internal static String KeysToString(params List<Keys> keysList) => String.Join('+', keysList);
+        
         internal static Boolean SoundLocsArrayFromString(String soundLocsStr, out List<String>? soundLocs, out String errorMessage)
         {
             if (soundLocsStr.Contains(';'))
             {
-                List<String> sLocs = [.. soundLocsStr.Split(';')];
-                List<String> lLocs = new();
+                List<String> sLocs = [.. soundLocsStr.Split(';', StringSplitOptions.TrimEntries)];
+                List<String> lLocs = [];
 
                 for (Int32 i = 0; i < sLocs.Count; i++)
                 {
@@ -304,19 +289,8 @@ namespace JNSoundboardCore
             }
         }
 
-        internal static String SoundLocsArrayToString(List<String> soundLocations)
-        {
-            String temp = "";
-            Int32 sLen = soundLocations.Count;
-
-            for (Int32 i = 0; i < sLen; i++)
-            {
-                temp += soundLocations[i].ToString() + (i == sLen - 1 ? "" : ";");
-            }
-
-            return temp;
-        }
-
+        internal static String SoundLocsArrayToString(List<String> soundLocations) => String.Join("; ", soundLocations);
+        
         internal static String CleanFileName(String fileName)
         {
             return Path.GetInvalidFileNameChars().Aggregate(fileName, (current, c) => current.Replace(c.ToString(), String.Empty));

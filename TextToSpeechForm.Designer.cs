@@ -4,7 +4,7 @@ using System.ComponentModel;
 using Timer = System.Windows.Forms.Timer;
 using EventHandler = System.EventHandler;
 
-namespace JNSoundboardCore
+namespace HASCore
 {
     partial class TextToSpeechForm
     {
