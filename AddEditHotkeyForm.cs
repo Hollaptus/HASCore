@@ -27,13 +27,20 @@ namespace HASCore
 
         internal List<String>? EditStrings = null;
         internal Int32 EditIndex = -1;
-        private Int32 lastAmountPressed = 0;
+        // private Int32 lastAmountPressed = 0;
         private MainForm? MainForm;
         private SettingsForm? SettingsForm;
 
         public AddEditHotkeyForm()
         {
             InitializeComponent();
+            GlobalKeyboardHook.Initialize();
+            GlobalKeyboardHook.KeysChanged += OnKeysChanged;
+        }
+
+        private void AddEditHotkeyForm_FormClosing(Object? sender, FormClosingEventArgs e)
+        {
+            GlobalKeyboardHook.KeysChanged -= OnKeysChanged;
         }
 
         private void AddEditSoundKeys_Load(Object sender, EventArgs e)
@@ -230,36 +237,29 @@ namespace HASCore
             }
         }
 
-        private void KeysTextBox_Enter(Object sender, EventArgs e) => timer1.Enabled = true;
-        
-        private void KeysTextBox_Leave(Object sender, EventArgs e) => timer1.Enabled = false;
+        private HashSet<Keys>? _lastDisplayedKeys = null;
 
-        private void MainTimer_Tick(Object sender, EventArgs e)
+        private void OnKeysChanged(Object? sender, HashSet<Keys> currentKeys)
         {
-            Int32 amountPressed = 0;
-
-            if (Keyboard.IsKeyDown(Keys.Escape))
+            // Обработка Backspace – очищаем поле и сбрасываем состояние
+            if (currentKeys.Contains(Keys.Back))
             {
-                lastAmountPressed = 50;
-                tbKeys.Text = ""; 
+                tbKeys.Text = String.Empty;
+                _lastDisplayedKeys = null;
+                return;
             }
-            else
+
+            // Если клавиш нет – ничего не делаем
+            if (currentKeys.Count == 0)
+                return;
+
+            // Обновляем текст только если количество клавиш увеличилось
+            // или если это первая комбинация
+            if (_lastDisplayedKeys == null || currentKeys.Count > _lastDisplayedKeys.Count)
             {
-                List<Keys> pressedKeys = [];
-
-                foreach (Keys key in Enum.GetValues<Keys>())
-                {
-                    if (Keyboard.IsKeyDown(key))
-                    {
-                        amountPressed++;
-                        pressedKeys.Add(key);
-                    }
-                }
-
-                if (amountPressed > lastAmountPressed)
-                    tbKeys.Text = Helper.KeysToString(pressedKeys);
-
-                lastAmountPressed = amountPressed;
+                String newText = Helper.KeysToString([.. currentKeys]);
+                tbKeys.Text = newText;
+                _lastDisplayedKeys = [.. currentKeys];
             }
         }
 

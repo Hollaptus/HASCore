@@ -40,7 +40,6 @@ namespace HASCore
             this.btnBrowseFolderLoc = new Button();
             this.btnCreateWAV = new Button();
             this.btnCreateWAVAdd = new Button();
-            this.timer1 = new Timer(this.Components);
             this.SuspendLayout();
             // 
             // tbText
@@ -82,8 +81,6 @@ namespace HASCore
             this.tbKeys.ReadOnly = true;
             this.tbKeys.Size = new Size(235, 20);
             this.tbKeys.TabIndex = 3;
-            this.tbKeys.Enter += new EventHandler(this.KeysTextBox_Enter);
-            this.tbKeys.Leave += new EventHandler(this.KeysTextBox_Leave);
             // 
             // label2
             // 
@@ -147,10 +144,6 @@ namespace HASCore
             this.btnCreateWAVAdd.UseVisualStyleBackColor = true;
             this.btnCreateWAVAdd.Click += new EventHandler(this.CreateWAVAddButton_Click);
             // 
-            // timer1
-            // 
-            this.timer1.Tick += new EventHandler(this.MainTimer_Tick);
-            // 
             // TextToSpeechForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -173,6 +166,7 @@ namespace HASCore
             this.Name = "TextToSpeechForm";
             this.Text = "TTS";
             this.Load += new EventHandler(this.TTS_Load);
+            this.FormClosing += TextToSpeechForm_FormClosing;
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -188,6 +182,5 @@ namespace HASCore
         private Button btnBrowseFolderLoc;
         private Button btnCreateWAV;
         private Button btnCreateWAVAdd;
-        private Timer timer1;
     }
 }

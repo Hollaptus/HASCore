@@ -14,9 +14,10 @@ namespace HASCore
         internal List<LoadXMLFile>? LoadXMLFilesList = CurrentSettings?.LoadXMLFiles; 
         // Flag for checking if we are currently editing XML presets.
         internal static Boolean EditLoadXMLFile = false;
-        // Counter of amount keys pressed last time (before the event).
-        private Int32 LastAmountPressed = 0;
-        
+        private HashSet<Keys>? _lastDisplayedKeys = null;
+        private Int32 _lastFocusedIndex = -1;
+
+
         /// Description
         /// <summary>
         ///     <see cref="SettingsForm"/> constructor for initialization of class properties.
@@ -25,6 +26,8 @@ namespace HASCore
         {
             // Calling initialization procedure from another part of the class.
             InitializeComponent();
+            GlobalKeyboardHook.Initialize();
+            GlobalKeyboardHook.KeysChanged += OnKeysChanged;
             
             // Iterating through list of XML presets.
             for (Int32 i = 0; i < LoadXMLFilesList?.Count; i++)
@@ -66,6 +69,11 @@ namespace HASCore
             RepeatOnHoldCheckBox?.Checked = CurrentSettings is not null 
                 && CurrentSettings.RepeatOnHold.HasValue 
                 && CurrentSettings.RepeatOnHold.Value;
+        }
+
+        private void SettingsForm_FormClosing(Object? sender, FormClosingEventArgs e)
+        {
+            GlobalKeyboardHook.KeysChanged -= OnKeysChanged;
         }
 
         /// Description
@@ -236,96 +244,41 @@ namespace HASCore
         private void KeysLocationsListView_MouseDoubleClick(Object? sender, MouseEventArgs e) 
             => EditButton_Click(sender, e); // Rerouting to an event of "EditButton"
 
-        /// Description
-        /// <summary>
-        ///     Event handler for the 'Enter' event of <see cref="StopKeysTextBox">StopKeysTextBox</see>.
-        /// </summary>
-        /// 
-        /// Parameters
-        /// <param name="sender">Object that sent the event.</param>
-        /// <param name="e">Arguments of the event.</param>
-        private void StopKeysTextBox_Enter(Object? sender, EventArgs e)
-            => MainTimer?.Enabled = true; // Enable the timer so we can read the keyboard inputs.
-
-        /// Description
-        /// <summary>
-        ///     Event handler for the 'Leave' event of <see cref="StopKeysTextBox">StopKeysTextBox</see>.
-        /// </summary>
-        /// 
-        /// Parameters
-        /// <param name="sender">Object that sent the event.</param>
-        /// <param name="e">Arguments of the event.</param>
-        private void StopKeysTextBox_Leave(Object? sender, EventArgs e)
-            => MainTimer?.Enabled = false; // Disabling the timer so we don't try to read the inputs all the time.
-        
-        /// Description
-        /// <summary>
-        ///     Event handler for the 'Enter' event of <see cref="ToggleKeysTextBox">ToggleKeysTextBox</see>.
-        /// </summary>
-        /// 
-        /// Parameters
-        /// <param name="sender">Object that sent the event.</param>
-        /// <param name="e">Arguments of the event.</param>
-        private void ToggleKeysTextBox_Enter(Object? sender, EventArgs e)
-            => MainTimer?.Enabled = true; // Enable the timer so we can read the keyboard inputs.
-        
-        /// Description
-        /// <summary>
-        ///     Event handler for the 'Leave' event of <see cref="ToggleKeysTextBox">ToggleKeysTextBox</see>.
-        /// </summary>
-        /// 
-        /// Parameters
-        /// <param name="sender">Object that sent the event.</param>
-        /// <param name="e">Arguments of the event.</param>
-        private void ToggleKeysTextBox_Leave(Object? sender, EventArgs e)
-            => MainTimer?.Enabled = false; // Disabling the timer so we don't try to read the inputs all the time.
-
-        /// Description
-        /// <summary>
-        ///     Event handler for the "Tick" event of <see cref="MainTimer">MainTimer</see> 
-        /// </summary>
-        /// 
-        /// Parameters
-        /// <param name="sender">Object that sent the event</param>
-        /// <param name="e">Arguments of the event.</param>
-        private void MainTimer_Tick(Object? sender, EventArgs e)
+        private void OnKeysChanged(Object? sender, HashSet<Keys> currentKeys)
         {
-            // Initializing the counter of current amount of keys pressed at the moment. 
-            Int32 currentAmountPressed = 0;
-            // Get currently pressed keys on the keyboard into a List.
-            List<Keys> pressedKeys = Keyboard.GetPressedKeys();
+            TextBox? selectedTextBox = this.Controls
+                .OfType<TextBox>()
+                .FirstOrDefault(tb => tb.Focused);
+            
+            if (selectedTextBox is null)
+                return;
 
-            // Checking if the user has pressed the 'Esc' key.
-            if (pressedKeys.Contains(Keys.Escape))
+            Int32 currentIndex = this.Controls.IndexOf(selectedTextBox);
+            
+            if (_lastFocusedIndex != currentIndex)
             {
-                // Resetting the last amount.
-                LastAmountPressed = 0;
-                // Clearing the input.
-                StopKeysTextBox?.Text = String.Empty;
-                // If the StopKeysTextBoxes is in focus - then we clear the input there.
-                if (StopKeysTextBox is not null && StopKeysTextBox.Focused) 
-                    StopKeysTextBox.Text = String.Empty;
-                // Same for the ToggleKeysTextBox.
-                if (ToggleKeysTextBox is not null && ToggleKeysTextBox.Focused) 
-                    ToggleKeysTextBox.Text = String.Empty;
+                _lastDisplayedKeys = null;
+                _lastFocusedIndex = currentIndex;
             }
-            else
+            
+            if (currentKeys.Count == 0)
             {
-                // If the amount of keys pressed is greater than the last amount,
-                // we check the focus of textboxes, so we can determine where should
-                // we write the current pressed keys as hotkey sequence.
-                if (pressedKeys.Count > LastAmountPressed)
-                {
-                    // If the StopKeysTextBoxes is in focus - then we write the current keys there.
-                    if (StopKeysTextBox is not null && StopKeysTextBox.Focused) 
-                        StopKeysTextBox.Text = Helper.KeysToString([.. pressedKeys]);
-                    // Same for the ToggleKeysTextBox.
-                    if (ToggleKeysTextBox is not null && ToggleKeysTextBox.Focused) 
-                        ToggleKeysTextBox.Text = Helper.KeysToString([.. pressedKeys]);
-                }
+                _lastDisplayedKeys = null;
+                return;
+            }
 
-                // Setting the amount of keys pressed to the current amount.
-                LastAmountPressed = currentAmountPressed;
+            if (currentKeys.Contains(Keys.Back))
+            {
+                selectedTextBox.Text = String.Empty;
+                _lastDisplayedKeys = null;
+                return;    
+            }
+
+            if (_lastDisplayedKeys == null || currentKeys.Count > _lastDisplayedKeys.Count)
+            {
+                String newText = Helper.KeysToString(currentKeys);
+                selectedTextBox?.Text = newText;
+                _lastDisplayedKeys = [.. currentKeys];
             }
         }
     }

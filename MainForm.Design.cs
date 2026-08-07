@@ -185,12 +185,12 @@ namespace HASCore
         ///     A notification icon on minimizing the soundboard to tray. 
         /// </summary>
         private NotifyIcon? NotificationIcon;
-        /// Description
-        /// <summary>
-        ///     A timer component used to poll for keyboard inputs 
-        ///     to play sounds, stop sounds, enable certain features, etc.
-        /// </summary>
-        internal Timer? MainTimer;
+        // /// Description
+        // /// <summary>
+        // ///     A timer component used to poll for keyboard inputs 
+        // ///     to play sounds, stop sounds, enable certain features, etc.
+        // /// </summary>
+        internal Timer? HoldRepeatTimer;
         /// Description
         /// <summary>
         ///     A timer component used to poll for keyboard inputs 
@@ -285,7 +285,7 @@ namespace HASCore
             // Icons
             this.NotificationIcon           = new NotifyIcon(this.Components);
             // Timers
-            this.MainTimer                  = new Timer(this.Components);
+            this.HoldRepeatTimer            = new Timer(this.Components);
             this.PushToTalkKeyTimer         = new Timer(this.Components);
 
             // Suspending layout logic before adding controls
@@ -674,11 +674,11 @@ namespace HASCore
             // Timers
 
             // 
-            // MainTimer
+            // HoldRepeatTimer
             // 
-            this.MainTimer.Interval = 50;
-            this.MainTimer.Enabled = true;
-            this.MainTimer.Tick += new EventHandler(this.MainTimer_Tick);
+            this.HoldRepeatTimer.Interval = 50; // Default value
+            this.HoldRepeatTimer.Enabled = true;
+            this.HoldRepeatTimer.Tick += new EventHandler(this.HoldRepeatTimer_Tick);
             // 
             // PushToTalkKeyTimer
             // 
@@ -697,6 +697,7 @@ namespace HASCore
             this.Name = "MainForm";
             this.Text = "HAS Core";
             this.MainMenuStrip = this.MenuStrip;
+            this.FormClosing += new FormClosingEventHandler(this.MainForm_FormClosing);
             
             // Adding the controls to the form
             this.Controls.Add(this.AudioDevicesGroupBox);

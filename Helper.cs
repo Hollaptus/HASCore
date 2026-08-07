@@ -241,12 +241,19 @@ namespace HASCore
 
         /// Description
         /// <summary>
-        ///     Function to convert a <see cref="List"/> of <see cref="Keys"> into a <see cref="String"/>.  
+        ///     Function to convert a set that is <see cref="IEnumerable"/> of <see cref="Keys"/> into a <see cref="String"/>.  
         /// </summary>
-        /// <param name="keysList"></param>
-        /// <returns></returns>
-        internal static String KeysToString(params List<Keys> keysList) => String.Join('+', keysList);
-        
+        /// 
+        /// <param name="keys">
+        ///     A set of keys that need to be converted to a <see cref="String"/> representation.
+        /// </param>
+        /// 
+        /// <returns>
+        ///     A <see cref="String"/> of combined keys with '+' separator.
+        /// </returns>
+        internal static String KeysToString(params IEnumerable<Keys> keys) 
+            => String.Join('+', keys.Select(k => k.ToString()).OrderByDescending(s => s));
+
         internal static Boolean SoundLocsArrayFromString(String soundLocsStr, out List<String>? soundLocs, out String errorMessage)
         {
             if (soundLocsStr.Contains(';'))

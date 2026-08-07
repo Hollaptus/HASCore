@@ -4,13 +4,9 @@ namespace HASCore
 {
     public class Keyboard
     {
-        const int INPUT_MOUSE = 0;
         const int INPUT_KEYBOARD = 1;
-        const int INPUT_HARDWARE = 2;
         const uint KEYEVENTF_KEYDOWN = 0x0000;
-        const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
         const uint KEYEVENTF_KEYUP = 0x0002;
-        const uint KEYEVENTF_UNICODE = 0x0004;
         const uint KEYEVENTF_SCANCODE = 0x0008;
 
         struct INPUT
@@ -23,22 +19,9 @@ namespace HASCore
         struct InputUnion
         {
             [FieldOffset(0)]
-            public MOUSEINPUT mi;
-            [FieldOffset(0)]
             public KEYBDINPUT ki;
             [FieldOffset(0)]
             public HARDWAREINPUT hi;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        struct MOUSEINPUT
-        {
-            public int dx;
-            public int dy;
-            public uint mouseData;
-            public uint dwFlags;
-            public uint time;
-            public IntPtr dwExtraInfo;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -66,19 +49,6 @@ namespace HASCore
         {
             short keyState = GetAsyncKeyState((byte)keyCode);
             return keyState < 0;
-        }
-        
-        public static List<Keys> GetPressedKeys()
-        {
-            List<Keys> pressedKeys = [];
-            
-            // Iterating through all the possible keys.
-            for (byte keyCode = 0; keyCode < 255; keyCode++) 
-                // MSB (Most Significant Bit) is set - the key is pressed
-                if ((GetAsyncKeyState(keyCode) & 0x8000) != 0) 
-                    pressedKeys.Add((Keys)keyCode);
-                
-            return pressedKeys;
         }
         
         [DllImport("user32.dll", SetLastError = true)]

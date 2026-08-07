@@ -20,9 +20,11 @@ namespace HASCore
 
         private Boolean KeyUpPushToTalkKey = false;
         private Keys PushToTalkKey;
-        private List<Keys>? KeysJustPressed = null;
         private Boolean ShowMsgBox = false;
         private Int32 LastIndex = -1;
+        private HashSet<Keys>? _lastProcessedKeys = null; // для отслеживания последней обработанной комбинации
+        private HashSet<Keys>? _holdKeys;        // клавиши комбинации, которую удерживаем
+        private SoundHotkey? _currentHoldHotkey; // соответствующий hotkey
 
         internal List<SoundHotkey> SoundHotkeys = [];
 
@@ -36,6 +38,9 @@ namespace HASCore
         {
             // Calling initialization procedure from another part of the class.
             InitializeComponent();
+
+            GlobalKeyboardHook.Initialize();
+            GlobalKeyboardHook.KeysChanged += OnKeysChanged;
 
             // Dynamically creating the ToolTip object for displaying
             // tooltips for certain controls
@@ -79,6 +84,16 @@ namespace HASCore
             // Also adding the event handler after input has ended
             // for 'Push to talk' functionality
             AudioPlaybackEngine.Instance.AllInputEnded += OnAllInputEnded;
+
+            HoldRepeatTimer?.Interval = CurrentSettings.DelayInMs ?? 50; // начальное значение
+        }
+
+        private void MainForm_FormClosing(Object? sender, FormClosingEventArgs e)
+        {
+            HoldRepeatTimer?.Stop();
+            HoldRepeatTimer?.Dispose();
+            GlobalKeyboardHook.KeysChanged -= OnKeysChanged;
+            GlobalKeyboardHook.Shutdown();
         }
 
         private void OnAllInputEnded(Object? sender, EventArgs? e)
@@ -497,13 +512,6 @@ namespace HASCore
             // If the checkbox is enabled - set the timer and start loopback.
             if (EnableCheckBox?.Checked == true)
             {
-                // If there are any settings or hotkeys - enable the timer.
-                if ((SoundHotkeys != null && SoundHotkeys.Count > 0) 
-                || (CurrentSettings.LoadXMLFiles != null && CurrentSettings.LoadXMLFiles.Count > 0))
-                    MainTimer?.Enabled = true;
-                // Otherwise, disable it.
-                else EnableCheckBox.Checked = false;
-
                 // Start the loopback if there are any devices and soundboard is enabled.
                 if (EnableCheckBox.Checked && PlaybackDevicesComboBox?.Items.Count > 0 && LoopbackDevicesComboBox?.SelectedIndex > 0)
                     StartLoopback();
@@ -513,115 +521,199 @@ namespace HASCore
             {
                 StopPlayback();
                 StopLoopback();
+                HoldRepeatTimer?.Stop();
             }
         }
 
         private void KeySoundsListView_MouseDoubleClick(Object? sender, MouseEventArgs? e) => EditSelectedSoundHotkey();
         
-        private bool WasHotkeyPressedBefore(List<Keys> currentPressed, List<Keys> sequence) => 
-            currentPressed.SequenceEqual(sequence) && !KeysJustPressed?.SequenceEqual(sequence) == true;
-
-        private void MainTimer_Tick(Object? sender, EventArgs? e)
+        private void OnKeysChanged(Object? sender, HashSet<Keys> currentKeys)
         {
-            List<Keys> keysPressed = Keyboard.GetPressedKeys();
-            if (keysPressed.Count == 0) return;
+            Console.WriteLine(String.Join("+", currentKeys));
 
-            // Check that required keys are pressed to enable or disable the soundboard.
-            if (CurrentSettings.EnableSoundboardKeys?.Count > 0
-                && WasHotkeyPressedBefore(keysPressed, CurrentSettings.EnableSoundboardKeys))
+            // 4. Проверка горячей клавиши для включения/выключения саундборда
+            if (CurrentSettings.EnableSoundboardKeys?.Count > 0 &&
+                currentKeys.SetEquals(CurrentSettings.EnableSoundboardKeys))
             {
-                EnableCheckBox?.Checked ^= true;
-                KeysJustPressed = keysPressed;
+                // Меняем состояние чекбокса (через Invoke)
+                this.Invoke((MethodInvoker)(() => EnableCheckBox?.Checked ^= true));
                 return;
             }
 
-            if (EnableCheckBox?.Checked == true)
+            // 1. Проверяем, включён ли саундборд (через Invoke, потому что это UI)
+            bool isEnabled = false;
+            this.Invoke((MethodInvoker)(() => isEnabled = EnableCheckBox?.Checked == true));
+            if (!isEnabled) return;
+
+            // 2. Если клавиш нет — сбрасываем последнюю обработанную комбинацию
+            if (currentKeys.Count == 0)
             {
-                // Check that required keys are pressed to play a sound.
-                if (SoundHotkeys.Count > 0) 
+                _lastProcessedKeys = null;
+                return;
+            }
+
+            // Если активен таймер повторения, но текущий набор не содержит все клавиши из _holdKeys – останавливаем таймер
+            if (HoldRepeatTimer != null && HoldRepeatTimer.Enabled && _holdKeys != null)
+            {
+                if (!_holdKeys.All(key => currentKeys.Contains(key)))
                 {
-                    IntPtr foregroundWindow = Helper.GetForegroundWindow();
+                    HoldRepeatTimer.Stop();
+                    _holdKeys = null;
+                    _currentHoldHotkey = null;
+                }
+            }
 
-                    foreach (SoundHotkey hotkey in SoundHotkeys)
+            // 3. Защита от повторной обработки одной и той же комбинации
+            if (_lastProcessedKeys != null && _lastProcessedKeys.SetEquals(currentKeys))
+                return;
+
+            // Запоминаем текущий набор как обработанный
+            _lastProcessedKeys = new HashSet<Keys>(currentKeys);
+
+            // 5. Основная логика (воспроизведение звуков, остановка, загрузка XML)
+            // ВСЕ обращения к UI элементам делаем через Invoke
+
+            // Проверяем PTT и другие настройки (все UI-свойства читаем через Invoke)
+            bool pttEnabled = false;
+            Keys pttKey = Keys.None;
+            int windowsSelectedIndex = 0;
+            string windowsSelectedItem = "";
+
+            this.Invoke((MethodInvoker)(() =>
+            {
+                pttEnabled = EnablePushToTalkCheckBox?.Checked == true;
+                pttKey = PushToTalkKey;
+                windowsSelectedIndex = WindowsComboBox?.SelectedIndex ?? 0;
+                windowsSelectedItem = WindowsComboBox?.SelectedItem as string ?? "";
+            }));
+
+            // Теперь можно использовать эти переменные в логике
+
+            // Проверяем горячие клавиши для звуков
+            if (SoundHotkeys.Count > 0)
+            {
+                IntPtr foregroundWindow = Helper.GetForegroundWindow();
+
+                foreach (SoundHotkey hotkey in SoundHotkeys)
+                {
+                    if (hotkey.Keys?.Count == 0
+                        || (hotkey.WindowTitle != String.Empty
+                        && !Helper.IsForegroundWindow(hotkey.WindowTitle, foregroundWindow)))
+                        continue;
+
+                    if (currentKeys.Count > 0 && currentKeys.Count == hotkey.Keys?.Count)
                     {
-                        if (hotkey.Keys?.Count == 0
-                            || (hotkey.WindowTitle != String.Empty 
-                            && !Helper.IsForegroundWindow(hotkey.WindowTitle, foregroundWindow)))
-                            continue;
+                        if (currentKeys.Except(hotkey.Keys).Any()) continue;
 
-                        if (keysPressed.Count > 0 && keysPressed.Count == hotkey.Keys?.Count)
+                        if (hotkey.Keys.All(x => x != 0) && hotkey.SoundLocations.Any(x => File.Exists(x)))
                         {
-                            if (keysPressed.Except(hotkey.Keys).Any()) continue;
-
-                            if (hotkey.Keys.All(x => x != 0) && hotkey.SoundLocations.Any(x => File.Exists(x)))
+                            // PTT логика (используем локальные переменные)
+                            if (pttEnabled
+                                && !KeyUpPushToTalkKey
+                                && !Keyboard.IsKeyDown(pttKey)
+                                && (windowsSelectedIndex == 0
+                                || Helper.IsForegroundWindow(windowsSelectedItem)))
                             {
-                                if (EnablePushToTalkCheckBox?.Checked == true 
-                                    && !KeyUpPushToTalkKey 
-                                    && !Keyboard.IsKeyDown(PushToTalkKey)
-                                    && (WindowsComboBox?.SelectedIndex == 0 
-                                    || Helper.IsForegroundWindow(WindowsComboBox?.SelectedItem as String)))
-                                {
-                                    KeyUpPushToTalkKey = true;
-                                    Boolean result = Keyboard.SendKey(PushToTalkKey, true);
-                                    Thread.Sleep(100);
-                                }
-                                
-                                if (CurrentSettings.RepeatOnHold == true 
-                                    || !hotkey.LastPlayTime.HasValue
-                                    || (CurrentSettings.RepeatOnHold == false
-                                    && hotkey.LastPlayTime.HasValue 
-                                    && (DateTime.Now - hotkey.LastPlayTime.Value).TotalMilliseconds >= CurrentSettings.DelayInMs))
-                                {
-                                    if (CurrentSettings.PlayOverEachother == false)
-                                        StopPlayback();   
-                                    PlayKeySound(hotkey);
-                                }
-
-                                hotkey.LastPlayTime = DateTime.Now;
-                                KeysJustPressed = keysPressed;
-                                return;
+                                KeyUpPushToTalkKey = true;
+                                Keyboard.SendKey(pttKey, true);
+                                Thread.Sleep(100);
                             }
+
+                            // Первое воспроизведение
+                            if (CurrentSettings.PlayOverEachother == false)
+                                StopPlayback();
+                            PlayKeySound(hotkey);
+
+                            // Обновляем время последнего воспроизведения
+                            hotkey.LastPlayTime = DateTime.Now;
+
+                            // Если включено повторение при удержании – запускаем таймер
+                            if (CurrentSettings.RepeatOnHold == true)
+                            {
+                                // Останавливаем предыдущий таймер, если был
+                                HoldRepeatTimer?.Stop();
+
+                                // Сохраняем комбинацию и hotkey для повторений
+                                _holdKeys = [.. hotkey.Keys ?? []];
+                                _currentHoldHotkey = hotkey;
+
+                                // Обновляем интервал таймера (на случай, если пользователь изменил настройки)
+                                HoldRepeatTimer?.Interval = CurrentSettings.DelayInMs ?? 50;
+
+                                // Запускаем таймер
+                                HoldRepeatTimer?.Start();
+                            }
+
+                            return; // выходим, т.к. комбинация обработана
                         }
                     }
                 }
+            }
 
-                // Check that required keys are pressed to stop all sounds.
-                if (CurrentSettings.StopSoundKeys?.Count > 0 
-                    && WasHotkeyPressedBefore(keysPressed, CurrentSettings.StopSoundKeys))
+            // Проверка клавиш для остановки всех звуков
+            if (CurrentSettings.StopSoundKeys?.Count > 0
+                && currentKeys.SetEquals(CurrentSettings.StopSoundKeys))
+            {
+                StopPlayback();
+                return;
+            }
+
+            // Проверка клавиш для загрузки XML
+            if (CurrentSettings.LoadXMLFiles?.Count > 0)
+            {
+                foreach (LoadXMLFile file in CurrentSettings.LoadXMLFiles)
                 {
-                    StopPlayback();
-                    KeysJustPressed = keysPressed;
-                    return;
-                }
-                
-                // Check that required keys are pressed to load an XML file.
-                if (CurrentSettings.LoadXMLFiles?.Count > 0) 
-                {
-                    foreach (LoadXMLFile file in CurrentSettings.LoadXMLFiles)
+                    if (file.Keys?.Count == 0 || file.Keys is null) continue;
+                    else if (currentKeys.SetEquals(file.Keys))
                     {
-                        if (file.Keys?.Count == 0) continue;
-                        else if (WasHotkeyPressedBefore(keysPressed, file.Keys!))
-                        {
-                            if (File.Exists(file.XMLLocation))
-                                LoadXMLFile(file.XMLLocation);
-                            KeysJustPressed = keysPressed;
-                            return;
-                        }
+                        if (File.Exists(file.XMLLocation))
+                            LoadXMLFile(file.XMLLocation);
+                        return;
                     }
                 }
+            }
 
-                if (KeyUpPushToTalkKey)
+            // PTT отпускание (если нужно)
+            if (KeyUpPushToTalkKey)
+            {
+                if (!Keyboard.IsKeyDown(pttKey)) KeyUpPushToTalkKey = false;
+
+                if (windowsSelectedIndex != 0 && !Helper.IsForegroundWindow(windowsSelectedItem))
                 {
-                    if (!Keyboard.IsKeyDown(PushToTalkKey)) KeyUpPushToTalkKey = false;
-
-                    if (WindowsComboBox?.SelectedIndex != 0 && !Helper.IsForegroundWindow(WindowsComboBox?.SelectedItem as String))
-                    {
-                        KeyUpPushToTalkKey = false;
-                        Keyboard.SendKey(PushToTalkKey, false);
-                    }
+                    KeyUpPushToTalkKey = false;
+                    Keyboard.SendKey(pttKey, false);
                 }
-            }    
-            KeysJustPressed = keysPressed.Count > 0 ? keysPressed : null;
+            }
+        }
+
+        private void HoldRepeatTimer_Tick(object? sender, EventArgs e)
+        {
+            // Если нет активной комбинации – выходим
+            if (_holdKeys == null || _currentHoldHotkey == null)
+            {
+                HoldRepeatTimer?.Stop();
+                return;
+            }
+
+            // Проверяем, все ли клавиши всё ещё зажаты
+            bool allPressed = _holdKeys.All(GlobalKeyboardHook.IsKeyDown);
+            if (!allPressed)
+            {
+                // Клавиши отпущены – останавливаем повтор
+                HoldRepeatTimer?.Stop();
+                _holdKeys = null;
+                _currentHoldHotkey = null;
+                return;
+            }
+
+            // Всё ещё зажаты – воспроизводим звук снова
+            if (CurrentSettings.PlayOverEachother == false)
+                StopPlayback();
+
+            PlayKeySound(_currentHoldHotkey);
+
+            // Обновляем время последнего воспроизведения (если нужно)
+            _currentHoldHotkey.LastPlayTime = DateTime.Now;
         }
 
         private void PlayKeySound(SoundHotkey currentKeysSounds)
@@ -653,7 +745,6 @@ namespace HASCore
             if (File.Exists(path))
             {
                 PlaySound(path);
-                KeysJustPressed = currentKeysSounds.Keys;
             }
             else if (!ShowMsgBox) //dont run when already showing messagebox (don't want a bunch of these on your screen, do you?)
             {

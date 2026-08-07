@@ -116,11 +116,6 @@ namespace HASCore
         ///     A list view for all added <see cref="XMLSettings"/> as presets.
         /// </summary>
         internal ListView? KeysLocationsListView;
-        /// Description
-        /// <summary>
-        ///     A timer component used to poll for keyboard inputs inside <see cref="TextBox"/> components.
-        /// </summary>
-        private Timer? MainTimer;
 
         /// Description
         /// <summary>
@@ -191,8 +186,6 @@ namespace HASCore
             this.XMLLocationsColumnHeader   = new ColumnHeader();
             // List views
             this.KeysLocationsListView      = new ListView();
-            // Timers
-            this.MainTimer                  = new Timer(this.Components);
 
             // Suspending layout logic before adding controls
             // for child objects to initialize without firing events
@@ -358,8 +351,6 @@ namespace HASCore
             this.StopKeysTextBox.Size = new Size(365, 20);
             this.StopKeysTextBox.ReadOnly = true;
             this.StopKeysTextBox.TabIndex = 0;
-            this.StopKeysTextBox.Enter += new EventHandler(this.StopKeysTextBox_Enter);
-            this.StopKeysTextBox.Leave += new EventHandler(this.StopKeysTextBox_Leave);
             // 
             // ToggleKeysTextBox
             //
@@ -369,8 +360,6 @@ namespace HASCore
             this.ToggleKeysTextBox.ReadOnly = true;
             this.ToggleKeysTextBox.Size = new Size(365, 20);
             this.ToggleKeysTextBox.TabIndex = 1;
-            this.ToggleKeysTextBox.Enter += new EventHandler(this.ToggleKeysTextBox_Enter);
-            this.ToggleKeysTextBox.Leave += new EventHandler(this.ToggleKeysTextBox_Leave);
 
             // Spinboxes
 
@@ -381,7 +370,7 @@ namespace HASCore
             this.HoldDelayNumeric.Location = new Point(250, 340);
             this.HoldDelayNumeric.Name = "HoldDelayNumeric";
             this.HoldDelayNumeric.Size = new Size(60, 24);
-            this.HoldDelayNumeric.TabIndex = 1;
+            this.HoldDelayNumeric.TabIndex = 2;
             this.HoldDelayNumeric.Minimum = 50;
             this.HoldDelayNumeric.Maximum = 1000;
             this.HoldDelayNumeric.Value = 500;
@@ -424,13 +413,7 @@ namespace HASCore
                 ]
             );
 
-            // Timers
 
-            // 
-            // MainTimer
-            // 
-            this.MainTimer.Tick += new EventHandler(this.MainTimer_Tick);
-            
             // Form
             
             // 
@@ -445,6 +428,7 @@ namespace HASCore
             this.Icon = (Icon?)resources.GetObject("$this.Icon");
             this.Name = "SettingsForm";
             this.Text = "Soundboard Settings";
+            this.FormClosing += SettingsForm_FormClosing;
 
             // Adding the controls to the form
             this.Controls.Add(this.ToggleKeysLabel);

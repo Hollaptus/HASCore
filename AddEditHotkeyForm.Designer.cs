@@ -37,7 +37,6 @@
             this.label1 = new System.Windows.Forms.Label();
             this.labelLoc = new System.Windows.Forms.Label();
             this.btnBrowseSoundLoc = new System.Windows.Forms.Button();
-            this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.gbWindowRestriction = new System.Windows.Forms.GroupBox();
             this.btnReloadWindows = new System.Windows.Forms.Button();
             this.cbEnableRestrictWindow = new System.Windows.Forms.CheckBox();
@@ -55,8 +54,8 @@
             this.tbKeys.ReadOnly = true;
             this.tbKeys.Size = new System.Drawing.Size(346, 20);
             this.tbKeys.TabIndex = 2;
-            this.tbKeys.Enter += new System.EventHandler(this.KeysTextBox_Enter);
-            this.tbKeys.Leave += new System.EventHandler(this.KeysTextBox_Leave);
+            // this.tbKeys.Enter += new System.EventHandler(this.KeysTextBox_Enter);
+            // this.tbKeys.Leave += new System.EventHandler(this.KeysTextBox_Leave);
             // 
             // btnOK
             // 
@@ -118,10 +117,6 @@
             this.btnBrowseSoundLoc.Text = "...";
             this.btnBrowseSoundLoc.UseVisualStyleBackColor = true;
             this.btnBrowseSoundLoc.Click += new System.EventHandler(this.BrowseSoundLocationButton_Click);
-            // 
-            // timer1
-            // 
-            this.timer1.Tick += new System.EventHandler(this.MainTimer_Tick);
             // 
             // gbWindowRestriction
             // 
@@ -206,6 +201,7 @@
             this.Name = "AddEditHotkeyForm";
             this.Text = "Add/edit sound";
             this.Load += new System.EventHandler(this.AddEditSoundKeys_Load);
+            this.FormClosing += AddEditHotkeyForm_FormClosing;
             this.gbWindowRestriction.ResumeLayout(false);
             this.gbWindowRestriction.PerformLayout();
             this.ResumeLayout(false);
@@ -222,7 +218,6 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label labelLoc;
         private System.Windows.Forms.Button btnBrowseSoundLoc;
-        private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.GroupBox gbWindowRestriction;
         private System.Windows.Forms.Button btnReloadWindows;
         private System.Windows.Forms.CheckBox cbEnableRestrictWindow;
