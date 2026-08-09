@@ -1,4 +1,6 @@
-﻿namespace HASCore
+﻿using HASCore.Forms;
+
+namespace HASCore
 {
     static class Program
     {
