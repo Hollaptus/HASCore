@@ -5,7 +5,7 @@
 
 namespace HASCore.Soundboard;
 
-class CachedSound
+internal class CachedSound
 {
     public float[] AudioData { get; private set; }
     public WaveFormat WaveFormat { get; private set; }
