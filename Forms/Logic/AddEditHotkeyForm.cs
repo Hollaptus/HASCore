@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using HASCore.Helpers;
+using HASCore.Helpers.Extensions;
 using HASCore.Keyboard;
 using HASCore.Soundboard;
 
@@ -11,6 +12,7 @@ public partial class AddEditHotkeyForm : Form
     internal Int32 EditIndex = -1;
     private MainForm? MainForm;
     private SettingsForm? SettingsForm;
+    private HashSet<Keys>? _lastDisplayedKeys = null;
 
     public AddEditHotkeyForm()
     {
@@ -212,14 +214,44 @@ public partial class AddEditHotkeyForm : Form
         }
     }
 
-    private HashSet<Keys>? _lastDisplayedKeys = null;
+
+
+    private void EnableRestrictWindowCheckBox_CheckedChanged(Object sender, EventArgs e)
+    {
+        cbWindows.Enabled = cbEnableRestrictWindow.Checked;
+        btnReloadWindows.Enabled = cbEnableRestrictWindow.Checked;
+    }
+
+    private void ReloadWindowsButton_Click(Object sender, EventArgs e)
+    {
+        LoadWindows();
+    }
 
     private void OnKeysChanged(Object? sender, HashSet<Keys> currentKeys)
     {
+        // On "Escape" we close the form gracefully.
+        if (currentKeys.Contains(Keys.Escape))
+            this.Close();
+
+        // On "Backspace" we remove the contents of the textbox.
         if (currentKeys.Contains(Keys.Back))
         {
-            tbKeys.Text = String.Empty;
-            _lastDisplayedKeys = null;
+            // Usually, using this.Controls.OfType<T>() method would be fine,
+            // but if/when we will add some GroupBox, Panel or other container,
+            // and put a TextBox inside of it - this will break, so instead
+            // we use the extension to get all the forms controls, even inside containers.
+            IEnumerable<TextBox> controls = this.GetAllControls().OfType<TextBox>();
+                
+            foreach (TextBox tbControl in controls)
+            {
+                if (tbControl.Focused && tbControl.Parent is not null)
+                {
+                    tbControl.Text = String.Empty;
+                    tbControl.Parent.Focus();
+                    _lastDisplayedKeys = null;
+                    break;     
+                }
+            }
             return;
         }
 
@@ -232,16 +264,5 @@ public partial class AddEditHotkeyForm : Form
             tbKeys.Text = newText;
             _lastDisplayedKeys = [.. currentKeys];
         }
-    }
-
-    private void EnableRestrictWindowCheckBox_CheckedChanged(Object sender, EventArgs e)
-    {
-        cbWindows.Enabled = cbEnableRestrictWindow.Checked;
-        btnReloadWindows.Enabled = cbEnableRestrictWindow.Checked;
-    }
-
-    private void ReloadWindowsButton_Click(Object sender, EventArgs e)
-    {
-        LoadWindows();
     }
 }
