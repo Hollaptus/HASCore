@@ -8,8 +8,8 @@ namespace HASCore.Forms;
 
 public partial class AddEditHotkeyForm : Form
 {
-    private MainForm? mainForm;
-    private SettingsForm? settingsForm;
+    private MainForm? _mainForm;
+    private SettingsForm? _settingsForm;
     /// <summary>
     /// For tracking the last processed key combination.
     /// </summary>
@@ -49,7 +49,7 @@ public partial class AddEditHotkeyForm : Form
             this.MinimumSize = new Size(375, 205);
             this.Size = new Size(375, 205);
 
-            settingsForm = Application.OpenForms.OfType<SettingsForm>().FirstOrDefault();
+            _settingsForm = Application.OpenForms.OfType<SettingsForm>().FirstOrDefault();
             this.Text = "Add/edit keys and XML location";
 
             if (EditIndex != -1)
@@ -60,7 +60,7 @@ public partial class AddEditHotkeyForm : Form
         }
         else
         {
-            mainForm = Application.OpenForms.OfType<MainForm>().FirstOrDefault();
+            _mainForm = Application.OpenForms.OfType<MainForm>().FirstOrDefault();
 
             locationLabel?.Text += " (use a semi-colon (;) to seperate multiple locations)";
 
@@ -154,20 +154,20 @@ public partial class AddEditHotkeyForm : Form
         {
             if (EditIndex != -1)
             {
-                settingsForm?.KeysLocationsListView?.Items[EditIndex].Text = keysTextBox?.Text;
-                settingsForm?.KeysLocationsListView?.Items[EditIndex].SubItems[1].Text = locationTextBox.Text;
+                _settingsForm?.KeysLocationsListView?.Items[EditIndex].Text = keysTextBox?.Text;
+                _settingsForm?.KeysLocationsListView?.Items[EditIndex].SubItems[1].Text = locationTextBox.Text;
 
-                settingsForm?.LoadXMLFilesList?[EditIndex].Keys = keysList;
-                settingsForm?.LoadXMLFilesList?[EditIndex].XMLLocation = locationTextBox.Text;
+                _settingsForm?.LoadXMLFilesList?[EditIndex].Keys = keysList;
+                _settingsForm?.LoadXMLFilesList?[EditIndex].XMLLocation = locationTextBox.Text;
             }
             else
             {
                 ListViewItem item = new (keysTextBox?.Text);
                 item.SubItems.Add(locationTextBox.Text);
 
-                settingsForm?.KeysLocationsListView?.Items.Add(item);
+                _settingsForm?.KeysLocationsListView?.Items.Add(item);
 
-                settingsForm?.LoadXMLFilesList?.Add(new XMLSettings.LoadXMLFile(keysList!, locationTextBox.Text));
+                _settingsForm?.LoadXMLFilesList?.Add(new XMLSettings.LoadXMLFile(keysList!, locationTextBox.Text));
             }
         }
         else
@@ -177,11 +177,11 @@ public partial class AddEditHotkeyForm : Form
 
             if (EditIndex > -1)
             {
-                mainForm?.KeySoundsListView?.Items[EditIndex].Text = keysTextBox?.Text;
-                mainForm?.KeySoundsListView?.Items[EditIndex].SubItems[1].Text = windowText;
-                mainForm?.KeySoundsListView?.Items[EditIndex].SubItems[2].Text = locationTextBox.Text;
+                _mainForm?.KeySoundsListView?.Items[EditIndex].Text = keysTextBox?.Text;
+                _mainForm?.KeySoundsListView?.Items[EditIndex].SubItems[1].Text = windowText;
+                _mainForm?.KeySoundsListView?.Items[EditIndex].SubItems[2].Text = locationTextBox.Text;
 
-                mainForm?.SoundHotkeys[EditIndex] = new XMLSettings.SoundHotkey(keysList!, windowText!, soundLocations!);
+                _mainForm?.SoundHotkeys[EditIndex] = new XMLSettings.SoundHotkey(keysList!, windowText!, soundLocations!);
             }
             else
             {
@@ -189,18 +189,18 @@ public partial class AddEditHotkeyForm : Form
                 newItem.SubItems.Add(windowText);
                 newItem.SubItems.Add(locationTextBox.Text);
 
-                mainForm?.KeySoundsListView?.Items.Add(newItem);
+                _mainForm?.KeySoundsListView?.Items.Add(newItem);
 
-                mainForm?.SoundHotkeys.Add(new XMLSettings.SoundHotkey(keysList!, windowText!, soundLocations!));
+                _mainForm?.SoundHotkeys.Add(new XMLSettings.SoundHotkey(keysList!, windowText!, soundLocations!));
             }
 
-            mainForm?.KeySoundsListView?.ListViewItemSorter = new Comparers.ListViewItemComparer(0);
-            mainForm?.KeySoundsListView?.Sort();
+            _mainForm?.KeySoundsListView?.ListViewItemSorter = new Comparers.ListViewItemComparer(0);
+            _mainForm?.KeySoundsListView?.Sort();
 
-            mainForm?.SoundHotkeys.Sort(new Comparers.SoundHotkeyComparer());
+            _mainForm?.SoundHotkeys.Sort(new Comparers.SoundHotkeyComparer());
 
-            mainForm?.KeysColumnHeader?.Width = -2;
-            mainForm?.SoundLocationColumnHeader?.Width = -2;
+            _mainForm?.KeysColumnHeader?.Width = -2;
+            _mainForm?.SoundLocationColumnHeader?.Width = -2;
         }
 
         this.Close();

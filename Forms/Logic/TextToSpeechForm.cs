@@ -8,7 +8,7 @@ namespace HASCore.Forms;
 
 public partial class TextToSpeechForm : Form
 {
-    private MainForm? mainForm;
+    private MainForm? _mainForm;
     private SpeechSynthesizer? _synth;
     /// <summary>
     /// For tracking the last processed key combination.
@@ -40,7 +40,7 @@ public partial class TextToSpeechForm : Form
 
     private void TTS_Load(Object? sender, EventArgs e)
     {
-        mainForm = Application.OpenForms[0] as MainForm;
+        _mainForm = Application.OpenForms[0] as MainForm;
     }
 
     private void BrowseFolderLocationButton_Click(Object? sender, EventArgs e)
@@ -100,18 +100,18 @@ public partial class TextToSpeechForm : Form
                     _synth.Dispose();
                     _synth = null;
 
-                    mainForm?.SoundHotkeys.Add(newSH);
+                    _mainForm?.SoundHotkeys.Add(newSH);
 
                     ListViewItem newItem = new (keysTextBox.Text);
                     newItem.SubItems.Add(""); //window title
                     newItem.SubItems.Add(newSH.SoundLocations[0]);
 
-                    mainForm?.KeySoundsListView?.Items.Add(newItem);
+                    _mainForm?.KeySoundsListView?.Items.Add(newItem);
 
-                    mainForm?.KeySoundsListView?.ListViewItemSorter = new Comparers.ListViewItemComparer(0);
-                    mainForm?.KeySoundsListView?.Sort();
+                    _mainForm?.KeySoundsListView?.ListViewItemSorter = new Comparers.ListViewItemComparer(0);
+                    _mainForm?.KeySoundsListView?.Sort();
 
-                    mainForm?.SoundHotkeys.Sort(new Comparers.SoundHotkeyComparer());
+                    _mainForm?.SoundHotkeys.Sort(new Comparers.SoundHotkeyComparer());
 
                     MessageBox.Show("File saved to " + newSH.SoundLocations[0]);
                 }

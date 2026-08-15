@@ -17,6 +17,54 @@ namespace HASCore.Forms;
 public partial class MainForm : Form
 {
     /// <summary>
+    /// Temporary variable for playing random sounds.
+    /// </summary>
+    private Int32 _tempLastIndex = -1;
+    /// <summary>
+    /// Randomizer for getting the index so we could play sounds when
+    /// there are multiple sound files listed on the same hotkey.
+    /// </summary>
+    private readonly Random _random = new ();
+    /// <summary>
+    /// A provider for the buffer of stored sounds in memory.
+    /// </summary>
+    private BufferedWaveProvider? _loopbackWaveProvider = null;
+    /// <summary>
+    /// A stream to which we should write our wave input for loopback.
+    /// </summary>
+    private WaveIn? _loopbackSourceStream = null;
+    /// <summary>
+    /// Device that we should output to from our stream and provider for loopback.
+    /// </summary>
+    private WaveOut? _loopbackWaveOut = null;
+    /// <summary>
+    /// A key that is used for the Push-To-Talk functionality.
+    /// </summary>
+    private Keys _pushToTalkKey;
+    /// <summary>
+    /// Variable for checking if the Push-To-Talk key is currently up.
+    /// </summary>
+    private Boolean _keyUpPushToTalkKey = false;
+    /// <summary>
+    /// Variable for checking if we should display a message box.
+    /// Used when there is currently a message box active so we 
+    /// don't spam the user with them.
+    /// </summary>
+    private Boolean _showMsgBox = false;
+    /// <summary>
+    /// For tracking the last processed key combination.
+    /// </summary>
+    private HashSet<Keys>? _lastProcessedKeys = null; 
+    /// <summary>
+    /// Combination keys that are being held.
+    /// </summary>
+    private HashSet<Keys>? _holdKeys;
+    /// <summary>
+    /// Respective hotkey that is currently being held.
+    /// </summary>
+    private SoundHotkey? _currentHoldHotkey;
+
+    /// <summary>
     /// Location of the current XML file with settings that is loaded.
     /// </summary>
     internal String XMLLocation = String.Empty;
@@ -24,54 +72,6 @@ public partial class MainForm : Form
     /// List of sounds and their respective hotkeys assocciated with them.
     /// </summary>
     internal List<SoundHotkey> SoundHotkeys = [];
-
-    /// <summary>
-    /// Temporary variable for playing random sounds.
-    /// </summary>
-    private Int32 TempLastIndex = -1;
-    /// <summary>
-    /// Randomizer for getting the index so we could play sounds when
-    /// there are multiple sound files listed on the same hotkey.
-    /// </summary>
-    private readonly Random Rand = new ();
-    /// <summary>
-    /// A provider for the buffer of stored sounds in memory.
-    /// </summary>
-    private BufferedWaveProvider? LoopbackWaveProvider = null;
-    /// <summary>
-    /// A stream to which we should write our wave input for loopback.
-    /// </summary>
-    private WaveIn? LoopbackSourceStream = null;
-    /// <summary>
-    /// Device that we should output to from our stream and provider for loopback.
-    /// </summary>
-    private WaveOut? LoopbackWaveOut = null;
-    /// <summary>
-    /// A key that is used for the Push-To-Talk functionality.
-    /// </summary>
-    private Keys PushToTalkKey;
-    /// <summary>
-    /// Variable for checking if the Push-To-Talk key is currently up.
-    /// </summary>
-    private Boolean KeyUpPushToTalkKey = false;
-    /// <summary>
-    /// Variable for checking if we should display a message box.
-    /// Used when there is currently a message box active so we 
-    /// don't spam the user with them.
-    /// </summary>
-    private Boolean ShowMsgBox = false;
-    /// <summary>
-    /// For tracking the last processed key combination.
-    /// </summary>
-    private HashSet<Keys>? LastProcessedKeys = null; 
-    /// <summary>
-    /// Combination keys that are being held.
-    /// </summary>
-    private HashSet<Keys>? HoldKeys;
-    /// <summary>
-    /// Respective hotkey that is currently being held.
-    /// </summary>
-    private SoundHotkey? CurrentHoldHotkey;
 
     /// Description
     /// <summary>
@@ -151,10 +151,10 @@ public partial class MainForm : Form
 
     private void OnAllInputEnded(Object? sender, EventArgs? e)
     {
-        if (KeyUpPushToTalkKey)
+        if (_keyUpPushToTalkKey)
         {
-            KeyUpPushToTalkKey = false;
-            KeyboardEmulator.SendKey(PushToTalkKey, false);
+            _keyUpPushToTalkKey = false;
+            KeyboardEmulator.SendKey(_pushToTalkKey, false);
         }
     }
 
@@ -267,27 +267,27 @@ public partial class MainForm : Form
                 Int32 deviceNumber = loopbackDevicesComboBox.SelectedIndex - 1;
 
                 // Setting the parameters of the loopback stream.
-                LoopbackSourceStream ??= new WaveIn();
-                LoopbackSourceStream.DeviceNumber = deviceNumber;
-                LoopbackSourceStream.WaveFormat = new WaveFormat(44100, WaveIn.GetCapabilities(deviceNumber).Channels);
-                LoopbackSourceStream.BufferMilliseconds = 25;
-                LoopbackSourceStream.NumberOfBuffers = 5;
-                LoopbackSourceStream.DataAvailable += LoopbackSourceStream_DataAvailable;
+                _loopbackSourceStream ??= new WaveIn();
+                _loopbackSourceStream.DeviceNumber = deviceNumber;
+                _loopbackSourceStream.WaveFormat = new WaveFormat(44100, WaveIn.GetCapabilities(deviceNumber).Channels);
+                _loopbackSourceStream.BufferMilliseconds = 25;
+                _loopbackSourceStream.NumberOfBuffers = 5;
+                _loopbackSourceStream.DataAvailable += LoopbackSourceStream_DataAvailable;
                 // Setting the parameters of the provider.
-                LoopbackWaveProvider = new BufferedWaveProvider(LoopbackSourceStream.WaveFormat)
+                _loopbackWaveProvider = new BufferedWaveProvider(_loopbackSourceStream.WaveFormat)
                 {
                     DiscardOnBufferOverflow = true
                 };
                 // Setting the parameters of the output.
-                LoopbackWaveOut ??= new WaveOut();
-                LoopbackWaveOut.DeviceNumber = loopbackDevicesComboBox.SelectedIndex;
-                LoopbackWaveOut.DesiredLatency = 125;
+                _loopbackWaveOut ??= new WaveOut();
+                _loopbackWaveOut.DeviceNumber = loopbackDevicesComboBox.SelectedIndex;
+                _loopbackWaveOut.DesiredLatency = 125;
                 // Initialize output based on the provider.
-                LoopbackWaveOut.Init(LoopbackWaveProvider);
+                _loopbackWaveOut.Init(_loopbackWaveProvider);
                 // Record what is gonna be looped backed.
-                LoopbackSourceStream.StartRecording();
+                _loopbackSourceStream.StartRecording();
                 // Play it out on the output.
-                LoopbackWaveOut.Play();
+                _loopbackWaveOut.Play();
             }
             else throw new NullReferenceException("Loopback devices list hasn't been initialized");
         }
@@ -304,15 +304,15 @@ public partial class MainForm : Form
         try
         {
             // Clearing resources.
-            LoopbackWaveOut?.Stop();
-            LoopbackWaveOut?.Dispose();
-            LoopbackWaveProvider?.ClearBuffer();
-            LoopbackSourceStream?.StopRecording();
-            LoopbackSourceStream?.Dispose();
+            _loopbackWaveOut?.Stop();
+            _loopbackWaveOut?.Dispose();
+            _loopbackWaveProvider?.ClearBuffer();
+            _loopbackSourceStream?.StopRecording();
+            _loopbackSourceStream?.Dispose();
             // Setting the values of objects to null reference.
-            LoopbackWaveOut = null;
-            LoopbackWaveProvider = null;
-            LoopbackSourceStream = null;
+            _loopbackWaveOut = null;
+            _loopbackWaveProvider = null;
+            _loopbackSourceStream = null;
         }
         catch (Exception ex) { MessageBox.Show(ex.ToString()); }
     }
@@ -458,8 +458,8 @@ public partial class MainForm : Form
 
     private void LoopbackSourceStream_DataAvailable(Object? sender, WaveInEventArgs? e)
     { 
-        if (LoopbackWaveProvider != null && LoopbackWaveProvider.BufferedDuration.TotalMilliseconds <= 100)
-            LoopbackWaveProvider.AddSamples(e?.Buffer, 0, e?.BytesRecorded ?? 0);
+        if (_loopbackWaveProvider != null && _loopbackWaveProvider.BufferedDuration.TotalMilliseconds <= 100)
+            _loopbackWaveProvider.AddSamples(e?.Buffer, 0, e?.BytesRecorded ?? 0);
     }
 
     private void SettingsToolStripMenuItem_Click(Object? sender, EventArgs? e) => new SettingsForm().ShowDialog();
@@ -596,7 +596,7 @@ public partial class MainForm : Form
                 if (currentKeys.Count == 1 && currentKeys.Contains(Keys.Escape))
                 {
                     pushToTalkKeyTextBox.Text = String.Empty;
-                    PushToTalkKey = Keys.None;
+                    _pushToTalkKey = Keys.None;
                     // Move focus away from the textbox, capture is done.
                     this.Focus();
                     // Early exit from the Invoke lambda.
@@ -608,7 +608,7 @@ public partial class MainForm : Form
                 {
                     Keys pressedKey = currentKeys.First();
                     pushToTalkKeyTextBox.Text = Conversions.KeysToString(pressedKey);
-                    PushToTalkKey = pressedKey;
+                    _pushToTalkKey = pressedKey;
                     this.Focus();
                     return;
                 }
@@ -630,24 +630,24 @@ public partial class MainForm : Form
 
         if (currentKeys.Count == 0)
         {
-            LastProcessedKeys = null;
+            _lastProcessedKeys = null;
             return;
         }
 
-        if (HoldRepeatTimer != null && HoldRepeatTimer.Enabled && HoldKeys != null)
+        if (HoldRepeatTimer != null && HoldRepeatTimer.Enabled && _holdKeys != null)
         {
-            if (!HoldKeys.All(currentKeys.Contains))
+            if (!_holdKeys.All(currentKeys.Contains))
             {
                 HoldRepeatTimer.Stop();
-                HoldKeys = null;
-                CurrentHoldHotkey = null;
+                _holdKeys = null;
+                _currentHoldHotkey = null;
             }
         }
 
-        if (LastProcessedKeys != null && LastProcessedKeys.SetEquals(currentKeys))
+        if (_lastProcessedKeys != null && _lastProcessedKeys.SetEquals(currentKeys))
             return;
 
-        LastProcessedKeys = [.. currentKeys];
+        _lastProcessedKeys = [.. currentKeys];
 
         Boolean pttEnabled = false;
         Keys pttKey = Keys.None;
@@ -657,7 +657,7 @@ public partial class MainForm : Form
         this.Invoke((MethodInvoker)(() =>
         {
             pttEnabled = enablePushToTalkCheckBox?.Checked == true;
-            pttKey = PushToTalkKey;
+            pttKey = _pushToTalkKey;
             windowsSelectedIndex = windowsComboBox?.SelectedIndex ?? 0;
             windowsSelectedItem = windowsComboBox?.SelectedItem as String ?? String.Empty;
         }));
@@ -680,12 +680,12 @@ public partial class MainForm : Form
                     if (hotkey.Keys.All(x => x != 0) && hotkey.SoundLocations.Any(x => File.Exists(x)))
                     {
                         if (pttEnabled
-                            && !KeyUpPushToTalkKey
+                            && !_keyUpPushToTalkKey
                             && !currentKeys.Contains(pttKey)
                             && (windowsSelectedIndex == 0
                             || WindowInterop.IsForegroundWindow(windowsSelectedItem)))
                         {
-                            KeyUpPushToTalkKey = true;
+                            _keyUpPushToTalkKey = true;
                             KeyboardEmulator.SendKey(pttKey, true);
                             Thread.Sleep(100);
                         }
@@ -698,8 +698,8 @@ public partial class MainForm : Form
                         {
                             HoldRepeatTimer?.Stop();
 
-                            HoldKeys = [.. hotkey.Keys ?? []];
-                            CurrentHoldHotkey = hotkey;
+                            _holdKeys = [.. hotkey.Keys ?? []];
+                            _currentHoldHotkey = hotkey;
 
                             HoldRepeatTimer?.Interval = CurrentSettings.DelayInMs ?? 50;
 
@@ -733,13 +733,13 @@ public partial class MainForm : Form
             }
         }
 
-        if (KeyUpPushToTalkKey)
+        if (_keyUpPushToTalkKey)
         {
-            if (!currentKeys.Contains(pttKey)) KeyUpPushToTalkKey = false;
+            if (!currentKeys.Contains(pttKey)) _keyUpPushToTalkKey = false;
 
             if (windowsSelectedIndex != 0 && !WindowInterop.IsForegroundWindow(windowsSelectedItem))
             {
-                KeyUpPushToTalkKey = false;
+                _keyUpPushToTalkKey = false;
                 KeyboardEmulator.SendKey(pttKey, false);
             }
         }
@@ -748,20 +748,20 @@ public partial class MainForm : Form
     private void HoldRepeatTimer_Tick(Object? sender, EventArgs e)
     {
         // If there is no active combination - we just exit.
-        if (HoldKeys == null || CurrentHoldHotkey == null)
+        if (_holdKeys == null || _currentHoldHotkey == null)
         {
             HoldRepeatTimer?.Stop();
             return;
         }
 
         // Checking if the keys for the sound are still pressed.
-        Boolean allPressed = HoldKeys.All(GlobalKeyboardHook.IsKeyDown);
+        Boolean allPressed = _holdKeys.All(GlobalKeyboardHook.IsKeyDown);
         if (!allPressed)
         {
             // Keys down - stop repeating sounds.
             HoldRepeatTimer?.Stop();
-            HoldKeys = null;
-            CurrentHoldHotkey = null;
+            _holdKeys = null;
+            _currentHoldHotkey = null;
             return;
         }
 
@@ -774,7 +774,7 @@ public partial class MainForm : Form
             StopPlayback();
 
         // Play the sound based on the hotkey provided.
-        PlayKeySound(CurrentHoldHotkey);
+        PlayKeySound(_currentHoldHotkey);
     }
 
     private void PlayKeySound(SoundHotkey currentKeysSounds)
@@ -788,15 +788,15 @@ public partial class MainForm : Form
 
             while (true)
             {
-                temp = Rand.Next(0, currentKeysSounds.SoundLocations.Count);
+                temp = _random.Next(0, currentKeysSounds.SoundLocations.Count);
 
-                if (temp != TempLastIndex && File.Exists(currentKeysSounds.SoundLocations[temp])) break;
+                if (temp != _tempLastIndex && File.Exists(currentKeysSounds.SoundLocations[temp])) break;
                 Thread.Sleep(1);
             }
 
-            TempLastIndex = temp;
+            _tempLastIndex = temp;
 
-            path = currentKeysSounds.SoundLocations[TempLastIndex];
+            path = currentKeysSounds.SoundLocations[_tempLastIndex];
         }
         else if (currentKeysSounds.SoundLocations.Count == 1)
             path = currentKeysSounds.SoundLocations.First(); //get first sound
@@ -805,12 +805,12 @@ public partial class MainForm : Form
         {
             PlaySound(path);
         }
-        else if (!ShowMsgBox) //dont run when already showing messagebox (don't want a bunch of these on your screen, do you?)
+        else if (!_showMsgBox) //dont run when already showing messagebox (don't want a bunch of these on your screen, do you?)
         {
             SystemSounds.Beep.Play();
-            ShowMsgBox = true;
+            _showMsgBox = true;
             MessageBox.Show("File " + path + " does not exist");
-            ShowMsgBox = false;
+            _showMsgBox = false;
         }
     }
 
@@ -835,7 +835,7 @@ public partial class MainForm : Form
     private void PlaybackDevicesComboBox_SelectedIndexChanged(Object? sender, EventArgs? e)
     {
         //start loopback on new device and stop all sounds playing
-        if (LoopbackWaveOut != null && LoopbackSourceStream != null && enableCheckBox?.Checked == true)
+        if (_loopbackWaveOut != null && _loopbackSourceStream != null && enableCheckBox?.Checked == true)
             StartLoopback();
 
         StopPlayback();

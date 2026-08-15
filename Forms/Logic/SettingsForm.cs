@@ -13,12 +13,12 @@ namespace HASCore.Forms;
 /// </summary>
 public partial class SettingsForm : Form
 {
+    private HashSet<Keys>? _lastPressedKeys = null;
+    private Int32 _lastFocusedIndex = -1;
     // Using List so we can dynamically add and remove entries of XMLSettings.
     internal List<LoadXMLFile>? LoadXMLFilesList = CurrentSettings?.LoadXMLFiles; 
     // Flag for checking if we are currently editing XML presets.
     internal static Boolean EditLoadXMLFile = false;
-    private HashSet<Keys>? LastDisplayedKeys = null;
-    private Int32 LastFocusedIndex = -1;
 
     /// Description
     /// <summary>
@@ -270,30 +270,30 @@ public partial class SettingsForm : Form
 
         Int32 currentIndex = this.Controls.IndexOf(selectedTextBox);
         
-        if (LastFocusedIndex != currentIndex)
+        if (_lastFocusedIndex != currentIndex)
         {
-            LastDisplayedKeys = null;
-            LastFocusedIndex = currentIndex;
+            _lastPressedKeys = null;
+            _lastFocusedIndex = currentIndex;
         }
         
         if (currentKeys.Count == 0)
         {
-            LastDisplayedKeys = null;
+            _lastPressedKeys = null;
             return;
         }
 
         if (currentKeys.Contains(Keys.Back))
         {
             selectedTextBox.Text = String.Empty;
-            LastDisplayedKeys = null;
+            _lastPressedKeys = null;
             return;    
         }
 
-        if (LastDisplayedKeys == null || currentKeys.Count > LastDisplayedKeys.Count)
+        if (_lastPressedKeys == null || currentKeys.Count > _lastPressedKeys.Count)
         {
             String newText = Conversions.KeysToString(currentKeys);
             selectedTextBox?.Text = newText;
-            LastDisplayedKeys = [.. currentKeys];
+            _lastPressedKeys = [.. currentKeys];
         }
     }
 }
