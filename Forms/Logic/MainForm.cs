@@ -85,7 +85,7 @@ public partial class MainForm : Form
         // Initializing the global WinAPI keyboard hook for processing
         // the user input, so we can subscribe the event handler "KeysChanged"
         // to an event "OnKeysChanged" that we can do some actions on pressing
-        // the hotkeys.   
+        // the hotkeys.
         GlobalKeyboardHook.Initialize();
         GlobalKeyboardHook.KeysChanged += OnKeysChanged;
 
@@ -98,10 +98,10 @@ public partial class MainForm : Form
 
         // Because we have already called the InitializeComponent procedure,
         // these buttons shouldn't be null, but we'll still check just in case
-        if (ReloadDevicesButton is not null)
-            tooltip.SetToolTip(ReloadDevicesButton, "Refresh sound devices");
-        if (ReloadWindowsButton is not null)
-            tooltip.SetToolTip(ReloadWindowsButton, "Reload windows");
+        if (reloadDevicesButton is not null)
+            tooltip.SetToolTip(reloadDevicesButton, "Refresh sound devices");
+        if (reloadWindowsButton is not null)
+            tooltip.SetToolTip(reloadWindowsButton, "Reload windows");
 
         // Calling procedures to populate controls with relevant information
         // For PlaybackDevicesComboBox and LoopbackDevicesComboBox:
@@ -112,20 +112,20 @@ public partial class MainForm : Form
         LoadSoundboardSettingsXML();
 
         // Also checking if the devices haven't changed since last launch: 
-        if (PlaybackDevicesComboBox is not null)
+        if (playbackDevicesComboBox is not null)
         {
             // We select the item that has been as default playback device last time.
-            if (PlaybackDevicesComboBox.Items.Contains(CurrentSettings.LastPlaybackDevice))
-                PlaybackDevicesComboBox.SelectedItem = CurrentSettings.LastPlaybackDevice;
+            if (playbackDevicesComboBox.Items.Contains(CurrentSettings.LastPlaybackDevice))
+                playbackDevicesComboBox.SelectedItem = CurrentSettings.LastPlaybackDevice;
             // Also adding the event handler for changes in the index of selected item in the combobox.
-            PlaybackDevicesComboBox.SelectedIndexChanged += PlaybackDevicesComboBox_SelectedIndexChanged;
+            playbackDevicesComboBox.SelectedIndexChanged += PlaybackDevicesComboBox_SelectedIndexChanged;
         }
         // Same for loopback.
-        if (LoopbackDevicesComboBox is not null) 
+        if (loopbackDevicesComboBox is not null) 
         {
-            if (LoopbackDevicesComboBox.Items.Contains(CurrentSettings.LastLoopbackDevice))
-                LoopbackDevicesComboBox.SelectedItem = CurrentSettings.LastLoopbackDevice;
-            LoopbackDevicesComboBox.SelectedIndexChanged += LoopbackDevicesComboBox_SelectedIndexChanged;
+            if (loopbackDevicesComboBox.Items.Contains(CurrentSettings.LastLoopbackDevice))
+                loopbackDevicesComboBox.SelectedItem = CurrentSettings.LastLoopbackDevice;
+            loopbackDevicesComboBox.SelectedIndexChanged += LoopbackDevicesComboBox_SelectedIndexChanged;
         }
 
         // After all the settings have been loaded, 
@@ -162,8 +162,8 @@ public partial class MainForm : Form
     {
         try
         {
-            if (PlaybackDevicesComboBox?.SelectedIndex is not null)
-                AudioPlaybackEngine.Instance.Init(PlaybackDevicesComboBox.SelectedIndex);
+            if (playbackDevicesComboBox?.SelectedIndex is not null)
+                AudioPlaybackEngine.Instance.Init(playbackDevicesComboBox.SelectedIndex);
             else throw new NullReferenceException("No audio device has been selected");
         }
         catch (Exception ex)
@@ -183,17 +183,17 @@ public partial class MainForm : Form
         {
             // We are checking if the combobox has been initialized just in case,
             // the controls should be initialized by now.
-            if (WindowsComboBox is not null)
+            if (windowsComboBox is not null)
             {
                 // Clearing the items and adding the 'Any window' option.
-                WindowsComboBox.Items.Clear();
-                WindowsComboBox.Items.Add("[Any window]");
-                WindowsComboBox.SelectedIndex = 0;
+                windowsComboBox.Items.Clear();
+                windowsComboBox.Items.Add("[Any window]");
+                windowsComboBox.SelectedIndex = 0;
 
                 // Getting all the processes currently running and adding to the list.
                 foreach (Process process in Process.GetProcesses())
                     if (!String.IsNullOrEmpty(process.MainWindowTitle))
-                        WindowsComboBox.Items.Add(process.MainWindowTitle);
+                        windowsComboBox.Items.Add(process.MainWindowTitle);
             }
             else throw new NullReferenceException("Windows list hasn't been initialized");
         }
@@ -211,7 +211,7 @@ public partial class MainForm : Form
         {
             // We are checking if the comboboxes have been initialized just in case,
             // the controls should be initialized by now.
-            if (PlaybackDevicesComboBox?.Items is not null && LoopbackDevicesComboBox?.Items is not null)
+            if (playbackDevicesComboBox?.Items is not null && loopbackDevicesComboBox?.Items is not null)
             {
                 List<WaveOutCapabilities> playbackSources = [];
                 List<WaveInCapabilities> loopbackSources = [];
@@ -225,24 +225,24 @@ public partial class MainForm : Form
                     loopbackSources.Add(WaveIn.GetCapabilities(i));
                 
                 // Clearing the list of items inside the comboboxes.
-                PlaybackDevicesComboBox.Items.Clear();
-                LoopbackDevicesComboBox.Items.Clear();
+                playbackDevicesComboBox.Items.Clear();
+                loopbackDevicesComboBox.Items.Clear();
 
                 // Adding the playback devices from audio devices capabilities list.
                 foreach (WaveOutCapabilities source in playbackSources)
-                    PlaybackDevicesComboBox.Items.Add(source.ProductName);
+                    playbackDevicesComboBox.Items.Add(source.ProductName);
                 
                 // Setting the index if there are any items.
-                if (PlaybackDevicesComboBox.Items.Count > 0)
-                    PlaybackDevicesComboBox.SelectedIndex = 0;
+                if (playbackDevicesComboBox.Items.Count > 0)
+                    playbackDevicesComboBox.SelectedIndex = 0;
                 // And adding an empty entry.
-                LoopbackDevicesComboBox.Items.Add(String.Empty);
+                loopbackDevicesComboBox.Items.Add(String.Empty);
 
                 // Doing the same for loopback devices.
                 foreach (WaveInCapabilities source in loopbackSources)
-                    LoopbackDevicesComboBox.Items.Add(source.ProductName);
+                    loopbackDevicesComboBox.Items.Add(source.ProductName);
 
-                LoopbackDevicesComboBox.SelectedIndex = 0;
+                loopbackDevicesComboBox.SelectedIndex = 0;
             }
             else throw new NullReferenceException("Lists haven't been initialized");
         }
@@ -262,9 +262,9 @@ public partial class MainForm : Form
             StopLoopback();
             // We are checking if the combobox has been initialized just in case,
             // the controls should be initialized by now.
-            if (LoopbackDevicesComboBox is not null)
+            if (loopbackDevicesComboBox is not null)
             {
-                Int32 deviceNumber = LoopbackDevicesComboBox.SelectedIndex - 1;
+                Int32 deviceNumber = loopbackDevicesComboBox.SelectedIndex - 1;
 
                 // Setting the parameters of the loopback stream.
                 LoopbackSourceStream ??= new WaveIn();
@@ -280,7 +280,7 @@ public partial class MainForm : Form
                 };
                 // Setting the parameters of the output.
                 LoopbackWaveOut ??= new WaveOut();
-                LoopbackWaveOut.DeviceNumber = LoopbackDevicesComboBox.SelectedIndex;
+                LoopbackWaveOut.DeviceNumber = loopbackDevicesComboBox.SelectedIndex;
                 LoopbackWaveOut.DesiredLatency = 125;
                 // Initialize output based on the provider.
                 LoopbackWaveOut.Init(LoopbackWaveProvider);
@@ -438,12 +438,19 @@ public partial class MainForm : Form
             // Get the first available item
             ListViewItem item = KeySoundsListView.SelectedItems[0];
 
+            // Build the record with values from ListViewItem
+            SoundHotkeyEditData editData = new (
+                Keys: item.Text,
+                WindowTitle: item.SubItems[1].Text,
+                SoundLocation: item.SubItems[2].Text
+            );
+
             // Create a new instance of the form and run dialog.
             new AddEditHotkeyForm
             {
                 // Get its contents and index and write their values
                 // to the fields of what we are editing.
-                EditStrings = [item.Text, item.SubItems[1].Text, item.SubItems[2].Text],
+                EditData = editData,
                 EditIndex = KeySoundsListView.SelectedIndices[0]
             }.ShowDialog();
         }
@@ -479,7 +486,7 @@ public partial class MainForm : Form
             SoundHotkeys.RemoveAt(KeySoundsListView.SelectedIndices[0]);
             KeySoundsListView.Items.Remove(KeySoundsListView.SelectedItems[0]);
 
-            if (KeySoundsListView.Items.Count == 0) EnableCheckBox?.Checked = false;
+            if (KeySoundsListView.Items.Count == 0) enableCheckBox?.Checked = false;
         }
     }
 
@@ -490,7 +497,7 @@ public partial class MainForm : Form
             SoundHotkeys.Clear();
             KeySoundsListView?.Items.Clear();
 
-            EnableCheckBox?.Checked = false;
+            enableCheckBox?.Checked = false;
         }
     }
 
@@ -561,10 +568,10 @@ public partial class MainForm : Form
     private void EnableCheckBox_CheckedChanged(Object? sender, EventArgs? e)
     {
         // If the checkbox is enabled - set the timer and start loopback.
-        if (EnableCheckBox?.Checked == true)
+        if (enableCheckBox?.Checked == true)
         {
             // Start the loopback if there are any devices and soundboard is enabled.
-            if (EnableCheckBox.Checked && PlaybackDevicesComboBox?.Items.Count > 0 && LoopbackDevicesComboBox?.SelectedIndex > 0)
+            if (enableCheckBox.Checked && playbackDevicesComboBox?.Items.Count > 0 && loopbackDevicesComboBox?.SelectedIndex > 0)
                 StartLoopback();
         }
         // Otherwise, stop all sounds and dispose of objects.
@@ -583,12 +590,12 @@ public partial class MainForm : Form
         // PTT key capture.
         this.Invoke((MethodInvoker)(() =>
         {
-            if (PushToTalkKeyTextBox?.Focused == true)
+            if (pushToTalkKeyTextBox?.Focused == true)
             {
                 // Cancel with Escape
                 if (currentKeys.Count == 1 && currentKeys.Contains(Keys.Escape))
                 {
-                    PushToTalkKeyTextBox.Text = String.Empty;
+                    pushToTalkKeyTextBox.Text = String.Empty;
                     PushToTalkKey = Keys.None;
                     // Move focus away from the textbox, capture is done.
                     this.Focus();
@@ -600,7 +607,7 @@ public partial class MainForm : Form
                 if (currentKeys.Count == 1)
                 {
                     Keys pressedKey = currentKeys.First();
-                    PushToTalkKeyTextBox.Text = Conversions.KeysToString(pressedKey);
+                    pushToTalkKeyTextBox.Text = Conversions.KeysToString(pressedKey);
                     PushToTalkKey = pressedKey;
                     this.Focus();
                     return;
@@ -613,12 +620,12 @@ public partial class MainForm : Form
         if (CurrentSettings.EnableSoundboardKeys?.Count > 0 &&
             currentKeys.SetEquals(CurrentSettings.EnableSoundboardKeys))
         {
-            this.Invoke((MethodInvoker)(() => EnableCheckBox?.Checked ^= true));
+            this.Invoke((MethodInvoker)(() => enableCheckBox?.Checked ^= true));
             return;
         }
 
         Boolean isEnabled = false;
-        this.Invoke((MethodInvoker)(() => isEnabled = EnableCheckBox?.Checked == true));
+        this.Invoke((MethodInvoker)(() => isEnabled = enableCheckBox?.Checked == true));
         if (!isEnabled) return;
 
         if (currentKeys.Count == 0)
@@ -649,10 +656,10 @@ public partial class MainForm : Form
 
         this.Invoke((MethodInvoker)(() =>
         {
-            pttEnabled = EnablePushToTalkCheckBox?.Checked == true;
+            pttEnabled = enablePushToTalkCheckBox?.Checked == true;
             pttKey = PushToTalkKey;
-            windowsSelectedIndex = WindowsComboBox?.SelectedIndex ?? 0;
-            windowsSelectedItem = WindowsComboBox?.SelectedItem as String ?? String.Empty;
+            windowsSelectedIndex = windowsComboBox?.SelectedIndex ?? 0;
+            windowsSelectedItem = windowsComboBox?.SelectedItem as String ?? String.Empty;
         }));
 
         if (SoundHotkeys.Count > 0)
@@ -809,18 +816,18 @@ public partial class MainForm : Form
 
     private void LoopbackDevicesComboBox_SelectedIndexChanged(Object? sender, EventArgs? e)
     {
-        if (LoopbackDevicesComboBox?.SelectedIndex > 0)
+        if (loopbackDevicesComboBox?.SelectedIndex > 0)
         {
-            if (EnableCheckBox?.Checked == true) //start loopback on new device, or stop loopback
+            if (enableCheckBox?.Checked == true) //start loopback on new device, or stop loopback
             {
-                if (String.IsNullOrEmpty(LoopbackDevicesComboBox.SelectedItem?.ToString())) StopLoopback();
+                if (String.IsNullOrEmpty(loopbackDevicesComboBox.SelectedItem?.ToString())) StopLoopback();
                 else StartLoopback();
             }
             else
                 StopLoopback();
         }
 
-        CurrentSettings.LastLoopbackDevice = LoopbackDevicesComboBox?.SelectedItem as String;
+        CurrentSettings.LastLoopbackDevice = loopbackDevicesComboBox?.SelectedItem as String;
 
         SaveSoundboardSettingsXML();
     }
@@ -828,7 +835,7 @@ public partial class MainForm : Form
     private void PlaybackDevicesComboBox_SelectedIndexChanged(Object? sender, EventArgs? e)
     {
         //start loopback on new device and stop all sounds playing
-        if (LoopbackWaveOut != null && LoopbackSourceStream != null && EnableCheckBox?.Checked == true)
+        if (LoopbackWaveOut != null && LoopbackSourceStream != null && enableCheckBox?.Checked == true)
             StartLoopback();
 
         StopPlayback();
@@ -836,7 +843,7 @@ public partial class MainForm : Form
         InitAudioPlaybackEngine();
         
         // String deviceName = PlaybackDevicesComboBox.SelectedItem.ToString();
-        CurrentSettings.LastPlaybackDevice = PlaybackDevicesComboBox?.SelectedItem as String;
+        CurrentSettings.LastPlaybackDevice = playbackDevicesComboBox?.SelectedItem as String;
 
         SaveSoundboardSettingsXML();
     }
@@ -845,7 +852,7 @@ public partial class MainForm : Form
     {
         if (this.WindowState == FormWindowState.Minimized)
         {
-            NotificationIcon?.Visible = true;
+            notificationIcon?.Visible = true;
 
             this.Hide();
         }
@@ -853,7 +860,7 @@ public partial class MainForm : Form
 
     private void NotificationIcon_MouseClick(Object? sender, MouseEventArgs? e)
     {
-        NotificationIcon?.Visible = false;
+        notificationIcon?.Visible = false;
 
         //show form and give focus
         this.WindowState = FormWindowState.Minimized;
@@ -863,11 +870,11 @@ public partial class MainForm : Form
 
     private void EnablePushToTalkCheckBox_CheckedChanged(Object? sender, EventArgs? e)
     {
-        if (EnablePushToTalkCheckBox?.Checked == true)
+        if (enablePushToTalkCheckBox?.Checked == true)
         {
-            if (String.IsNullOrEmpty(PushToTalkKeyTextBox?.Text))
+            if (String.IsNullOrEmpty(pushToTalkKeyTextBox?.Text))
             {
-                EnablePushToTalkCheckBox.Checked = false;
+                enablePushToTalkCheckBox.Checked = false;
                 MessageBox.Show("There is no push to talk key entered");
                 return;
             }

@@ -1,5 +1,6 @@
 ﻿using System.Speech.Synthesis;
 using HASCore.Helpers;
+using HASCore.Helpers.Extensions;
 using HASCore.Keyboard;
 using HASCore.Soundboard;
 
@@ -7,14 +8,29 @@ namespace HASCore.Forms;
 
 public partial class TextToSpeechForm : Form
 {
-    private MainForm? MainForm;
-    private SpeechSynthesizer? Synth;
+    private MainForm? mainForm;
+    private SpeechSynthesizer? _synth;
+    /// <summary>
+    /// For tracking the last processed key combination.
+    /// </summary>
+    private HashSet<Keys>? _lastProcessedKeys = null;
+    private IEnumerable<TextBox> _tbControls; 
 
     public TextToSpeechForm()
     {
         InitializeComponent();
+        // Initializing the global WinAPI keyboard hook for processing
+        // the user input, so we can subscribe the event handler "KeysChanged"
+        // to an event "OnKeysChanged" that we can do some actions on pressing
+        // the hotkeys.
         GlobalKeyboardHook.Initialize();
         GlobalKeyboardHook.KeysChanged += OnKeysChanged;
+        
+        // Usually, using this.Controls.OfType<T>() method would be fine,
+        // but if/when we will add some GroupBox, Panel or other container,
+        // and put a TextBox inside of it - this will break, so instead
+        // we use the extension to get all the forms controls, even inside containers.
+        _tbControls = this.GetAllControls().OfType<TextBox>();
     }
 
     public void TextToSpeechForm_FormClosing(Object? sender, FormClosingEventArgs e)
@@ -22,37 +38,37 @@ public partial class TextToSpeechForm : Form
         GlobalKeyboardHook.KeysChanged -= OnKeysChanged;
     }
 
-    private void TTS_Load(Object sender, EventArgs e)
+    private void TTS_Load(Object? sender, EventArgs e)
     {
-        MainForm = Application.OpenForms[0] as MainForm;
+        mainForm = Application.OpenForms[0] as MainForm;
     }
 
-    private void BrowseFolderLocationButton_Click(Object sender, EventArgs e)
+    private void BrowseFolderLocationButton_Click(Object? sender, EventArgs e)
     {
         FolderBrowserDialog diag = new ();
 
         if (diag.ShowDialog() == DialogResult.OK)
         {
-            tbWhereSave.Text = diag.SelectedPath;
+            saveLocationTextBox?.Text = diag.SelectedPath;
         }
     }
 
-    private void CreateWAVButton_Click(Object sender, EventArgs e)
+    private void CreateWAVButton_Click(Object? sender, EventArgs e)
     {
-        if (!String.IsNullOrWhiteSpace(tbText.Text) && !String.IsNullOrWhiteSpace(tbWhereSave.Text) && Directory.Exists(tbWhereSave.Text))
+        if (!String.IsNullOrWhiteSpace(inputTextBox?.Text) && !String.IsNullOrWhiteSpace(saveLocationTextBox?.Text) && Directory.Exists(saveLocationTextBox.Text))
         {
-            String path = tbWhereSave.Text + "\\" + Files.CleanFileName(tbText.Text.Replace(" ", "") + ".wav");
+            String path = saveLocationTextBox.Text + "\\" + Files.CleanFileName(inputTextBox.Text.Replace(" ", "") + ".wav");
 
-            Synth = new ();
-            Synth.SetOutputToWaveFile(path);
+            _synth = new ();
+            _synth.SetOutputToWaveFile(path);
 
             PromptBuilder builder = new ();
-            builder.AppendText(tbText.Text);
+            builder.AppendText(inputTextBox.Text);
 
-            Synth.Speak(builder);
+            _synth.Speak(builder);
 
-            Synth.Dispose();
-            Synth = null;
+            _synth.Dispose();
+            _synth = null;
 
             MessageBox.Show("File saved to " + path);
         }
@@ -62,40 +78,40 @@ public partial class TextToSpeechForm : Form
         }
     }
 
-    private void CreateWAVAddButton_Click(Object sender, EventArgs e)
+    private void CreateWAVAddButton_Click(Object? sender, EventArgs e)
     {
-        if (!String.IsNullOrWhiteSpace(tbText.Text) && !String.IsNullOrWhiteSpace(tbKeys.Text) && !String.IsNullOrWhiteSpace(tbWhereSave.Text) && Directory.Exists(tbWhereSave.Text))
+        if (!String.IsNullOrWhiteSpace(inputTextBox?.Text) && !String.IsNullOrWhiteSpace(keysTextBox?.Text) && !String.IsNullOrWhiteSpace(saveLocationTextBox?.Text) && Directory.Exists(saveLocationTextBox.Text))
         {
 
-            if (Conversions.KeysArrayFromString(tbKeys.Text, out List<Keys>? convertedKeys, out String? error))
+            if (Conversions.KeysArrayFromString(keysTextBox.Text, out List<Keys>? convertedKeys, out String? error))
             {
                 if (convertedKeys?.Count > 0)
                 {
-                    XMLSettings.SoundHotkey newSH = new (convertedKeys, "", [tbWhereSave.Text + "\\" + Files.CleanFileName(tbText.Text.Replace(" ", "") + ".wav")]);
+                    XMLSettings.SoundHotkey newSH = new (convertedKeys, "", [saveLocationTextBox.Text + "\\" + Files.CleanFileName(inputTextBox.Text.Replace(" ", "") + ".wav")]);
 
-                    Synth = new SpeechSynthesizer();
-                    Synth.SetOutputToWaveFile(newSH.SoundLocations[0]);
+                    _synth = new SpeechSynthesizer();
+                    _synth.SetOutputToWaveFile(newSH.SoundLocations[0]);
 
                     PromptBuilder builder = new ();
-                    builder.AppendText(tbText.Text);
+                    builder.AppendText(inputTextBox.Text);
 
-                    Synth.Speak(builder);
+                    _synth.Speak(builder);
 
-                    Synth.Dispose();
-                    Synth = null;
+                    _synth.Dispose();
+                    _synth = null;
 
-                    MainForm?.SoundHotkeys.Add(newSH);
+                    mainForm?.SoundHotkeys.Add(newSH);
 
-                    ListViewItem newItem = new (tbKeys.Text);
+                    ListViewItem newItem = new (keysTextBox.Text);
                     newItem.SubItems.Add(""); //window title
                     newItem.SubItems.Add(newSH.SoundLocations[0]);
 
-                    MainForm?.KeySoundsListView?.Items.Add(newItem);
+                    mainForm?.KeySoundsListView?.Items.Add(newItem);
 
-                    MainForm?.KeySoundsListView?.ListViewItemSorter = new Comparers.ListViewItemComparer(0);
-                    MainForm?.KeySoundsListView?.Sort();
+                    mainForm?.KeySoundsListView?.ListViewItemSorter = new Comparers.ListViewItemComparer(0);
+                    mainForm?.KeySoundsListView?.Sort();
 
-                    MainForm?.SoundHotkeys.Sort(new Comparers.SoundHotkeyComparer());
+                    mainForm?.SoundHotkeys.Sort(new Comparers.SoundHotkeyComparer());
 
                     MessageBox.Show("File saved to " + newSH.SoundLocations[0]);
                 }
@@ -111,34 +127,52 @@ public partial class TextToSpeechForm : Form
         }
     }
 
-    private void CloseButton_Click(Object sender, EventArgs e)
+    private void CloseButton_Click(Object? sender, EventArgs e)
     {
         this.Close();
     }
 
-    private HashSet<Keys>? _lastDisplayedKeys = null;
-
     private void OnKeysChanged(Object? sender, HashSet<Keys> currentKeys)
     {
-        // Обработка Backspace – очищаем поле и сбрасываем состояние
-        if (currentKeys.Contains(Keys.Back))
+        // Saving the current selected textbox that is readonly
+        // so we correctly handle the input for saving the hotkeys.
+        TextBox? readOnlyTextBox = _tbControls.FirstOrDefault(tb => tb.ReadOnly && tb.Focused);
+
+        // After all the keys are up - clear the set.
+        if (currentKeys.Count == 0)
         {
-            tbKeys.Text = String.Empty;
-            _lastDisplayedKeys = null;
+            _lastProcessedKeys = null;
             return;
         }
 
-        // Если клавиш нет – ничего не делаем
-        if (currentKeys.Count == 0)
-            return;
-
-        // Обновляем текст только если количество клавиш увеличилось
-        // или если это первая комбинация
-        if (_lastDisplayedKeys == null || currentKeys.Count > _lastDisplayedKeys.Count)
+        // On "Escape" we either unfocus everything or close the form gracefully.
+        if (currentKeys.Contains(Keys.Escape))
         {
-            String newText = Conversions.KeysToString([.. currentKeys]);
-            tbKeys.Text = newText;
-            _lastDisplayedKeys = [.. currentKeys];
+            if (this.ActiveControl is not null)
+            {
+                this.ActiveControl = null;
+                return;
+            }
+            else this.Close();
+        }
+
+        // If the hotkey textbox is focused and is readonly - we remove the current keys
+        // and unfocus the textbox so we don't capture the keys outside the focus.
+        if (currentKeys.Contains(Keys.Back))
+        {
+            _lastProcessedKeys = null;
+            readOnlyTextBox?.Text = String.Empty;
+            return;
+        }
+
+        // If there are no pressed keys at the moment, the count of keys is more or equal
+        // to the previous count, or if the currently pressed keys are not equal to previous
+        // ones, then we update the keys, as long the textbox for hotkeys is focused.    
+        if (_lastProcessedKeys == null 
+            || (currentKeys.Count >= _lastProcessedKeys.Count && !_lastProcessedKeys.SetEquals(currentKeys)))
+        {
+            _lastProcessedKeys = [.. currentKeys];
+            readOnlyTextBox?.Text = Conversions.KeysToString(_lastProcessedKeys);
         }
     }
 }

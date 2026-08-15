@@ -18,12 +18,12 @@ public class KeyboardHook : IDisposable
     #region WinAPI Constants and Imports
 
     // Hook type for low-level keyboard events.
-    private const Int32 WH_KEYBOARD_LL  = 13;
+    private const Int32     WH_KEYBOARD_LL  = 13;
     // Windows message constants.
-    private const IntPtr WM_KEYDOWN     = 0x0100;
-    private const IntPtr WM_KEYUP       = 0x0101;
-    private const IntPtr WM_SYSKEYDOWN  = 0x0104;
-    private const IntPtr WM_SYSKEYUP    = 0x0105;
+    private const IntPtr    WM_KEYDOWN      = 0x0100;
+    private const IntPtr    WM_KEYUP        = 0x0101;
+    private const IntPtr    WM_SYSKEYDOWN   = 0x0104;
+    private const IntPtr    WM_SYSKEYUP     = 0x0105;
 
     /// Description
     /// <summary>

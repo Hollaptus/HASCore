@@ -121,7 +121,7 @@
   <data name="timer1.TrayLocation" type="System.Drawing.Point, System.Drawing">
     <value>17, 17</value>
   </data>
-  <data name="btnReloadWindows.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+  <data name="reloadWindowsButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAE
         UAAABFABrxbPyAAAABh0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4zjOaXUAAAAaZJREFUOE99kj9r

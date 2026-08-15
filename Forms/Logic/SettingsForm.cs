@@ -1,5 +1,6 @@
 ﻿using HASCore.Helpers;
 using HASCore.Keyboard;
+using HASCore.Soundboard;
 // Declaring the using statement so we don't have to always prepend
 // 'XMLSettings' to an already static fields of the class.
 using static HASCore.Soundboard.XMLSettings;
@@ -62,19 +63,19 @@ public partial class SettingsForm : Form
         }
 
         // Checking if there are any hotkeys mapped to specific actions.
-        ToggleKeysTextBox?.Text = Conversions.KeysToString(CurrentSettings?.EnableSoundboardKeys ?? []);
-        StopKeysTextBox?.Text = Conversions.KeysToString(CurrentSettings?.StopSoundKeys ?? []);
+        toggleKeysTextBox?.Text = Conversions.KeysToString(CurrentSettings?.EnableSoundboardKeys ?? []);
+        stopKeysTextBox?.Text = Conversions.KeysToString(CurrentSettings?.StopSoundKeys ?? []);
 
         // Also checking if there are any settings checked.
-        MinimizeToTrayCheckBox?.Checked = CurrentSettings is not null 
+        minimizeToTrayCheckBox?.Checked = CurrentSettings is not null 
             && CurrentSettings.MinimizeToTray.HasValue 
             && CurrentSettings.MinimizeToTray.Value;
 
-        PlayOverEachotherCheckBox?.Checked = CurrentSettings is not null 
+        playOverEachotherCheckBox?.Checked = CurrentSettings is not null 
             && CurrentSettings.PlayOverEachother.HasValue 
             && CurrentSettings.PlayOverEachother.Value;
         
-        RepeatOnHoldCheckBox?.Checked = CurrentSettings is not null 
+        repeatOnHoldCheckBox?.Checked = CurrentSettings is not null 
             && CurrentSettings.RepeatOnHold.HasValue 
             && CurrentSettings.RepeatOnHold.Value;
     }
@@ -86,7 +87,7 @@ public partial class SettingsForm : Form
 
     /// Description
     /// <summary>
-    ///     Event handler for the 'Click' event of <see cref="AddButton">AddButton</see>.
+    ///     Event handler for the 'Click' event of <see cref="addButton">AddButton</see>.
     /// </summary>
     /// 
     /// Parameters
@@ -111,7 +112,7 @@ public partial class SettingsForm : Form
 
     /// Description
     /// <summary>
-    ///     Event handler for the 'Click' event of <see cref="EditButton">EditButton</see>.
+    ///     Event handler for the 'Click' event of <see cref="editButton">EditButton</see>.
     /// </summary>
     /// 
     /// Parameters
@@ -126,12 +127,18 @@ public partial class SettingsForm : Form
             // we are currently editing the list of XML presets.
             EditLoadXMLFile = true;
 
+            // Build the record with values from ListViewItem
+            SoundHotkeyEditData editData = new (
+                Keys: KeysLocationsListView.SelectedItems[0].Text,
+                SoundLocation: KeysLocationsListView.SelectedItems[0].SubItems[1].Text
+            );
+
             // Initializing the new form of editing XML dynamically
             // with parameters of the current entry that we are editing.
             AddEditHotkeyForm form = new ()
             {
                 EditIndex = KeysLocationsListView.SelectedIndices[0],
-                EditStrings = [KeysLocationsListView.SelectedItems[0].Text, KeysLocationsListView.SelectedItems[0].SubItems[1].Text]
+                EditData = editData,
             };
 
             // Then create a window of that form so the user can
@@ -146,7 +153,7 @@ public partial class SettingsForm : Form
 
     /// Descriptions
     /// <summary>
-    ///     Event handler for the 'Click' event of <see cref="RemoveButton">RemoveButton</see>.
+    ///     Event handler for the 'Click' event of <see cref="removeButton">RemoveButton</see>.
     /// </summary>
     /// 
     /// Parameters
@@ -168,7 +175,7 @@ public partial class SettingsForm : Form
     
     /// Description
     /// <summary>
-    ///     Event handler for the 'Click' event of <see cref="OKButton">OKButton</see>.
+    ///     Event handler for the 'Click' event of <see cref="okButton">OKButton</see>.
     /// </summary>
     /// 
     /// Parameters
@@ -192,19 +199,19 @@ public partial class SettingsForm : Form
             {
                 // Trying to get array of Keys, and if we encounter an error,
                 // we throw an exception with the error specified.
-                if ((!String.IsNullOrEmpty(StopKeysTextBox?.Text) 
-                    && !Conversions.KeysArrayFromString(StopKeysTextBox?.Text, out stopKeysArr, out error))
-                    || (!String.IsNullOrEmpty(ToggleKeysTextBox?.Text) 
-                    && !Conversions.KeysArrayFromString(ToggleKeysTextBox?.Text, out toggleKeysArr, out error)))
+                if ((!String.IsNullOrEmpty(stopKeysTextBox?.Text) 
+                    && !Conversions.KeysArrayFromString(stopKeysTextBox?.Text, out stopKeysArr, out error))
+                    || (!String.IsNullOrEmpty(toggleKeysTextBox?.Text) 
+                    && !Conversions.KeysArrayFromString(toggleKeysTextBox?.Text, out toggleKeysArr, out error)))
                     throw new ArgumentException("Keys mismatch");
                 
                 // Assigning values to the fields of settings.
                 CurrentSettings.EnableSoundboardKeys = toggleKeysArr ?? [];
                 CurrentSettings.StopSoundKeys = stopKeysArr ?? [];
                 CurrentSettings.LoadXMLFiles = [.. LoadXMLFilesList];
-                CurrentSettings.MinimizeToTray = MinimizeToTrayCheckBox?.Checked ?? false;
-                CurrentSettings.PlayOverEachother = PlayOverEachotherCheckBox?.Checked ?? false;
-                CurrentSettings.RepeatOnHold = RepeatOnHoldCheckBox?.Checked ?? false;
+                CurrentSettings.MinimizeToTray = minimizeToTrayCheckBox?.Checked ?? false;
+                CurrentSettings.PlayOverEachother = playOverEachotherCheckBox?.Checked ?? false;
+                CurrentSettings.RepeatOnHold = repeatOnHoldCheckBox?.Checked ?? false;
                 
                 // Calling the procedure to save changes.
                 SaveSoundboardSettingsXML();
@@ -232,7 +239,7 @@ public partial class SettingsForm : Form
 
     /// Description
     /// <summary>
-    ///     Event handler for the 'Click' event of <see cref="CancelButton">CancelButton</see>.
+    ///     Event handler for the 'Click' event of <see cref="cancelButton">CancelButton</see>.
     /// </summary>
     /// 
     /// Parameters

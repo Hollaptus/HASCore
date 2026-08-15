@@ -1,29 +1,17 @@
 namespace HASCore.Keyboard;
 
-/// Description
 /// <summary>
 ///     Provides a global keyboard hook that monitors key presses and releases across all applications.
 /// </summary>
 /// <remarks>
-///     This class uses a low-level keyboard hook to capture keyboard events system‑wide.
+///     This class uses a low‑level keyboard hook to capture keyboard events system‑wide.
 ///     It maintains a set of currently pressed keys and raises the <see cref="KeysChanged"/>
 ///     event whenever the set changes. The hook must be initialized once before use.
 /// </remarks>
 public static class GlobalKeyboardHook
 {
-    private static KeyboardHook? Hook;
-    private static Boolean Initialized = false;
-    private static readonly HashSet<Keys> PressedKeys = [];
+    #region Events
 
-    /// Description
-    /// <summary>
-    ///     Determines whether the specified key is currently being held down.
-    /// </summary>
-    /// <param name="key">The key to check.</param>
-    /// <returns><c>true</c> if the key is currently pressed; otherwise, <c>false</c>.</returns>
-    public static Boolean IsKeyDown(Keys key) => PressedKeys.Contains(key);
-
-    /// Description
     /// <summary>
     ///     Occurs when the set of currently pressed keys changes (i.e., a key is pressed or released).
     /// </summary>
@@ -33,7 +21,36 @@ public static class GlobalKeyboardHook
     /// </remarks>
     public static event EventHandler<HashSet<Keys>>? KeysChanged;
 
-    /// Description
+    #endregion
+
+    #region Private Fields
+
+    /// <summary>
+    ///     The underlying <see cref="KeyboardHook"/> instance that provides low‑level events.
+    /// </summary>
+    private static KeyboardHook? _hook;
+
+    /// <summary>
+    ///     Indicates whether the hook has been successfully initialized.
+    /// </summary>
+    private static Boolean _initialized = false;
+
+    /// <summary>
+    ///     Set of keys currently held down (used to maintain state and avoid duplicate events).
+    /// </summary>
+    private static readonly HashSet<Keys> _pressedKeys = [];
+
+    #endregion
+
+    #region Public Methods
+
+    /// <summary>
+    ///     Determines whether the specified key is currently being held down.
+    /// </summary>
+    /// <param name="key">The key to check.</param>
+    /// <returns><c>true</c> if the key is currently pressed; otherwise, <c>false</c>.</returns>
+    public static Boolean IsKeyDown(Keys key) => _pressedKeys.Contains(key);
+
     /// <summary>
     ///     Initializes the global keyboard hook. This method must be called once before using the hook.
     /// </summary>
@@ -43,19 +60,18 @@ public static class GlobalKeyboardHook
     /// </remarks>
     public static void Initialize()
     {
-        if (Initialized) return;
+        if (_initialized) return;
 
-        Hook = new KeyboardHook();
-        Hook.KeyDown += OnKeyDown;
-        Hook.KeyUp += OnKeyUp;
-        Hook.Start();
-        Initialized = true;
+        _hook = new KeyboardHook();
+        _hook.KeyDown += OnKeyDown;
+        _hook.KeyUp += OnKeyUp;
+        _hook.Start();
+        _initialized = true;
 
         // Ensure the hook is disposed when the application shuts down.
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => Hook?.Dispose();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => _hook?.Dispose();
     }
 
-    /// Description
     /// <summary>
     ///     Stops and disposes the keyboard hook, clearing all internal state.
     /// </summary>
@@ -65,34 +81,44 @@ public static class GlobalKeyboardHook
     /// </remarks>
     public static void Shutdown()
     {
-        if (Hook != null)
+        if (_hook != null)
         {
-            Hook.KeyDown -= OnKeyDown;
-            Hook.KeyUp -= OnKeyUp;
-            Hook.Dispose();
-            Hook = null;
-            Initialized = false;
-            PressedKeys.Clear();
+            _hook.KeyDown -= OnKeyDown;
+            _hook.KeyUp -= OnKeyUp;
+            _hook.Dispose();
+            _hook = null;
+            _initialized = false;
+            _pressedKeys.Clear();
         }
     }
 
-    // Handler for key press events.
+    #endregion
+
+    #region Private Methods
+
+    /// <summary>
+    ///     Handler for key press events from the underlying <see cref="KeyboardHook"/>.
+    /// </summary>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="key">The key that was pressed.</param>
     private static void OnKeyDown(Object? sender, Keys key)
     {
         // If the key was not already pressed, add it and notify subscribers.
-        if (PressedKeys.Add(key))
-        {
-            KeysChanged?.Invoke(null, PressedKeys);
-        }
+        if (_pressedKeys.Add(key))
+            KeysChanged?.Invoke(null, _pressedKeys);
     }
 
-    // Handler for key release events.
+    /// <summary>
+    ///     Handler for key release events from the underlying <see cref="KeyboardHook"/>.
+    /// </summary>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="key">The key that was released.</param>
     private static void OnKeyUp(Object? sender, Keys key)
     {
         // If the key was pressed, remove it and notify subscribers.
-        if (PressedKeys.Remove(key))
-        {
-            KeysChanged?.Invoke(null, PressedKeys);
-        }
+        if (_pressedKeys.Remove(key))
+            KeysChanged?.Invoke(null, _pressedKeys);
     }
+
+    #endregion
 }
