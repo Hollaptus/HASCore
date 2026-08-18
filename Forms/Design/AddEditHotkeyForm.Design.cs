@@ -41,9 +41,9 @@ public partial class AddEditHotkeyForm
     private Button? cancelButton;
     /// Description
     /// <summary>
-    ///     Button to browse for a sound file.
+    ///     Button to browse for a file.
     /// </summary>
-    private Button? browseSoundButton;
+    private Button? browseFileButton;
     /// Description
     /// <summary>
     ///     Button to reload the list of windows.
@@ -122,7 +122,7 @@ public partial class AddEditHotkeyForm
         // Buttons
         this.okButton                       = new Button();
         this.cancelButton                   = new Button();
-        this.browseSoundButton              = new Button();
+        this.browseFileButton              = new Button();
         this.reloadWindowsButton            = new Button();
         // Group boxes
         this.windowRestrictionGroupBox      = new GroupBox();
@@ -203,16 +203,16 @@ public partial class AddEditHotkeyForm
         this.cancelButton.UseVisualStyleBackColor = true;
         this.cancelButton.Click += this.CancelButton_Click;
         // 
-        // browseSoundButton
+        // browseFileButton
         // 
-        this.browseSoundButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        this.browseSoundButton.Location = new Point(327, 22);
-        this.browseSoundButton.Name = "browseSoundButton";
-        this.browseSoundButton.Size = new Size(28, 23);
-        this.browseSoundButton.TabIndex = 1;
-        this.browseSoundButton.Text = "...";
-        this.browseSoundButton.UseVisualStyleBackColor = true;
-        this.browseSoundButton.Click += this.BrowseSoundLocationButton_Click;
+        this.browseFileButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        this.browseFileButton.Location = new Point(327, 22);
+        this.browseFileButton.Name = "browseFileButton";
+        this.browseFileButton.Size = new Size(28, 23);
+        this.browseFileButton.TabIndex = 1;
+        this.browseFileButton.Text = "...";
+        this.browseFileButton.UseVisualStyleBackColor = true;
+        this.browseFileButton.Click += this.BrowseFileButton_Click;
         // 
         // reloadWindowsButton
         // 
@@ -316,7 +316,7 @@ public partial class AddEditHotkeyForm
         this.Controls.Add(this.locationLabel);
         this.Controls.Add(this.keysTextBox);
         this.Controls.Add(this.locationTextBox);
-        this.Controls.Add(this.browseSoundButton);
+        this.Controls.Add(this.browseFileButton);
         this.Controls.Add(this.okButton);
         this.Controls.Add(this.cancelButton);
         this.Controls.Add(this.windowRestrictionGroupBox);

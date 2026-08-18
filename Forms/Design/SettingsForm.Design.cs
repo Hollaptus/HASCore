@@ -4,9 +4,23 @@ using System.ComponentModel;
 
 namespace HASCore.Forms;
 
+/// Description
 /// <summary>
-/// <see cref="SettingsForm"/> class part for implementing the initialization 
+///     <see cref="SettingsForm"/> class part for implementing the initialization
+///     of an object. Provides the settings dialog for configuring the soundboard
+///     application, including key bindings, XML presets, and playback options.
 /// </summary>
+/// <remarks>
+///     <para>
+///         This form allows the user to view, add, edit, and remove XML‑based sound presets,
+///         change global hotkeys (stop all sounds, toggle soundboard enabled), and adjust
+///         playback behaviour (minimise to tray, overlapping sounds, repeat on hold).
+///     </para>
+///     <para>
+///         The form is implemented as a <see langword="partial"/> class to separate the
+///         design <see cref="InitializeComponent"/> code from the rest of the logic.
+///     </para>
+/// </remarks>
 partial class SettingsForm
 {
     /// Description
@@ -116,7 +130,9 @@ partial class SettingsForm
     /// </summary>
     /// 
     /// Parameters
-    /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+    /// <param name="disposing">
+    ///     <c>true</c> if managed resources should be disposed; otherwise, <c>false</c>.
+    /// </param>
     protected override void Dispose(Boolean disposing)
     {
         if (disposing && (components != null))
@@ -129,6 +145,8 @@ partial class SettingsForm
     /// <summary>
     ///     Component initialization on program startup.
     /// </summary>
+    /// 
+    /// Additional information
     /// <remarks>
     ///     This procedure is needed for two things:
     ///     <list type="number">
