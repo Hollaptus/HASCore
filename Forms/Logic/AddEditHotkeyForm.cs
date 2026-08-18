@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 using HASCore.Helpers;
 using HASCore.Helpers.Extensions;
 using HASCore.Keyboard;
@@ -42,41 +43,64 @@ public partial class AddEditHotkeyForm : Form
 
     private void AddEditSoundKeys_Load(Object? sender, EventArgs e)
     {
+        // Hide window restriction if we are adding/editing XML preset files.
         if (SettingsForm.EditLoadXMLFile)
         {
-            // Hide window restriction if we are adding/editing XML files.
+            // Remove visibility of the options to restrict 
+            // hotkey triggering in a certain window.
             windowRestrictionGroupBox?.Visible = false;
+            // Set the window size accordingly, since we don't
+            // have a portion of the form components visible.
             this.MinimumSize = new Size(375, 205);
             this.Size = new Size(375, 205);
 
+            // Getting the current open settings form. 
             _settingsForm = Application.OpenForms.OfType<SettingsForm>().FirstOrDefault();
+            // Changing the window title for the current mode.
             this.Text = "Add/edit keys and XML location";
 
+            // If the index of current item of ListView doesn't equal to
+            // -1 (no entry selected), we get the current data from the item. 
             if (EditIndex != -1)
             {
                 keysTextBox?.Text = EditData?.Keys;
                 locationTextBox?.Text = EditData?.SoundLocation;
             }
         }
+        // Otherwise we've opened the form from the context of adding the hotkey to play sound.
         else
         {
+            // Get the main form of the app.
             _mainForm = Application.OpenForms.OfType<MainForm>().FirstOrDefault();
 
+            // Add info to the labels text that we can put more than one file here.
             locationLabel?.Text += " (use a semi-colon (;) to seperate multiple locations)";
 
+            // Load currently open windows into the combobox.
             LoadWindows();
 
+            // If the index of current item of ListView doesn't equal to
+            // -1 (no entry selected), we get the current data from the item.
+            // For the context of adding the sound hotkey - also get the window
+            // restriction settings. 
             if (EditIndex != -1)
             {
+                // Get the hotkey for the current ListView item.
                 keysTextBox?.Text = EditData?.Keys;
 
+                // If the window restriction is filled - also fill the options.
                 if (!String.IsNullOrEmpty(EditData?.WindowTitle))
                 {
+                    // Enable the checkbox for the restriction.
                     enableRestrictWindowCheckBox?.Checked = true;
 
+                    // Get the current index of window by title. 
                     Int32 index = windowsComboBox?.Items.IndexOf(EditData?.WindowTitle) ?? -1;
 
-                    if (index != -1) windowsComboBox?.SelectedIndex = index;
+                    // If the window still exists - select it from the combobox.
+                    if (index != -1) 
+                        windowsComboBox?.SelectedIndex = index;
+                    // Otherwise add the entry and select it.
                     else
                     {
                         windowsComboBox?.Items.Add(EditData?.WindowTitle!);
@@ -84,18 +108,17 @@ public partial class AddEditHotkeyForm : Form
                     }
                 }
 
+                // Get the location(s) of the hotkey entry. 
                 locationTextBox?.Text = EditData?.SoundLocation;
             }
         }
     }
 
+    // Unfocusing all the controls so we can leave 
+    // by pressing the "Escape" key upon opening the form. 
     private void AddEditHotkeyForm_Shown(Object? sender, EventArgs e)
-    {
-        // Unfocusing all the controls so we can leave 
-        // by pressing the "Escape" key upon opening the form. 
-        this.ActiveControl = null;
-    }
-
+        => this.ActiveControl = null;
+    
     private void LoadWindows()
     {
         // Clear all the items.
@@ -115,23 +138,22 @@ public partial class AddEditHotkeyForm : Form
 
     private void OKButton_Click(Object? sender, EventArgs e)
     {
+        // Using the builder for displaying multiple error messages,
+        // if there are any.
+        StringBuilder stringBuilder = new ();
+        
+        // If the location is empty
         if (String.IsNullOrWhiteSpace(locationTextBox?.Text))
-        {
-            MessageBox.Show("Location is empty");
-            return;
-        }
+            stringBuilder.AppendLine("Location is empty");
 
         if (SettingsForm.EditLoadXMLFile && String.IsNullOrWhiteSpace(keysTextBox?.Text))
-        {
-            MessageBox.Show("No keys entered");
-            return;
-        }
+            stringBuilder.Append("No keys entered");
 
         List<String>? soundLocations = null;
-        String? errorMessage = String.Empty;
 
-        if (!SettingsForm.EditLoadXMLFile 
-            && Conversions.SoundLocsArrayFromString(locationTextBox.Text, out soundLocations, out errorMessage))
+        if (locationTextBox is not null 
+            && !SettingsForm.EditLoadXMLFile 
+            && Conversions.SoundLocsArrayFromString(locationTextBox.Text, out soundLocations, out String? errorMessage))
         {
             if (soundLocations is not null && soundLocations.Any(x => String.IsNullOrWhiteSpace(x) || !File.Exists(x)))
             {
@@ -142,32 +164,46 @@ public partial class AddEditHotkeyForm : Form
 
             if (soundLocations == null)
             {
-                MessageBox.Show(errorMessage);
+                stringBuilder.AppendLine(errorMessage);
                 return;
             }
         }
 
-        if (!Conversions.KeysArrayFromString(keysTextBox?.Text, out List<Keys>? keysList, out errorMessage)) 
+        if (!Conversions.KeysArrayFromString(keysTextBox?.Text, out List<Keys>? keysList, out errorMessage))
+        {
             keysList = [];
+            stringBuilder.AppendLine(errorMessage);
+        }
+
+        if (stringBuilder.Length > 0)
+        {
+            MessageBox.Show(
+                stringBuilder.ToString(), 
+                "Errors have occured", 
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+            return;
+        }
 
         if (SettingsForm.EditLoadXMLFile)
         {
             if (EditIndex != -1)
             {
                 _settingsForm?.KeysLocationsListView?.Items[EditIndex].Text = keysTextBox?.Text;
-                _settingsForm?.KeysLocationsListView?.Items[EditIndex].SubItems[1].Text = locationTextBox.Text;
+                _settingsForm?.KeysLocationsListView?.Items[EditIndex].SubItems[1].Text = locationTextBox?.Text;
 
                 _settingsForm?.LoadXMLFilesList?[EditIndex].Keys = keysList;
-                _settingsForm?.LoadXMLFilesList?[EditIndex].XMLLocation = locationTextBox.Text;
+                _settingsForm?.LoadXMLFilesList?[EditIndex].XMLLocation = locationTextBox?.Text;
             }
             else
             {
                 ListViewItem item = new (keysTextBox?.Text);
-                item.SubItems.Add(locationTextBox.Text);
+                item.SubItems.Add(locationTextBox?.Text);
 
                 _settingsForm?.KeysLocationsListView?.Items.Add(item);
 
-                _settingsForm?.LoadXMLFilesList?.Add(new XMLSettings.LoadXMLFile(keysList!, locationTextBox.Text));
+                _settingsForm?.LoadXMLFilesList?.Add(new XMLSettings.LoadXMLFile(keysList, locationTextBox?.Text));
             }
         }
         else
