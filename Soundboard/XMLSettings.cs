@@ -10,7 +10,7 @@ namespace HASCore.Soundboard;
 /// <param name="Keys">The key combination as a string (e.g., "Ctrl+A").</param>
 /// <param name="WindowTitle">The window restriction (or empty for no restriction).</param>
 /// <param name="SoundLocation">The file path to the sound.</param>
-public record SoundHotkeyEditData(string Keys, string SoundLocation, string? WindowTitle = null);
+public record SoundHotkeyEditData(String Keys, String SoundLocation, String? WindowTitle = null);
 
 public class XMLSettings
 {
