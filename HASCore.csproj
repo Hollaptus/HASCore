@@ -17,4 +17,10 @@
     <PackageReference Include="System.Speech" Version="10.0.6" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Update="Resources/resx/*.resx">
+      <LogicalName>HASCore.Forms.%(Filename).resources</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>
