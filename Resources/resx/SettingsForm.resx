@@ -121,22 +121,8 @@
   <data name="timer1.TrayLocation" type="System.Drawing.Point, System.Drawing">
     <value>17, 17</value>
   </data>
-  <data name="btnReloadWindows.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
-    <value>
-        iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAE
-        UAAABFABrxbPyAAAABh0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4zjOaXUAAAAaZJREFUOE99kj9r
-        FFEUxScatTNBEW23VIyCSIKNm0YQO5Gpdufd33lvmW4+w1jYWAgWlqKF2CgpooWCX0BFkBSiIiSSRBBU
-        tDAERbPhhjHMbuGFA/O4f865506W/SeAe8CZuq73jOfaMSHpSErpeIzxZIzxLPDZzN7EGK8Mh8OJkeo8
-        z/dKOtFM/wFsOCQ5tiQNgS+SLo80uxRgCfgt6bWkR8CiQ9KmN0paNbNeWZZTIYRTVVUd8Mbrkv6Y2f1+
-        v9+pqupgr9fbgZl9cqlmNp9SOgTcBd65wkzSW+DjYDDojOyQZZ5bCCHMukRnAW4BfyXddMafkp66jPFG
-        MzvWdhTIGx+WfeoK8N6L/hX4kJTShd0JTQCXJH11s/xxx+nNrPCTpJSOArclLbWbyrLcB1xzE4GHLmde
-        0g1Jc8AM8MSTZrZWFMU5R4zxvKSrwDdJ637jrNvtTvrifnzgmTvc3M5N+O7wvST9ar4Hzr4rpfkRBKw3
-        h98EXkl6CTwHHpvZxTzP97dX2Aln9yTwwsw+FEVx2Mym3ay6rifH60eiYT4dQngwnmvHNmr85vJNDoV2
-        AAAAAElFTkSuQmCC
-</value>
-  </data>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
   <data name="$this.Icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources/Images/hasc-icon.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+    <value>../Images/hasc-icon.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

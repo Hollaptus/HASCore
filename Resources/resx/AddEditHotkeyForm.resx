@@ -118,13 +118,13 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-  <data name="mainTimer.TrayLocation" type="System.Drawing.Point, System.Drawing">
+  <data name="timer1.TrayLocation" type="System.Drawing.Point, System.Drawing">
     <value>17, 17</value>
   </data>
-  <data name="ReloadButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+  <data name="reloadWindowsButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAE
-        TwAABE8BkMxxGAAAABh0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4zjOaXUAAAAaZJREFUOE99kj9r
+        UAAABFABrxbPyAAAABh0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4zjOaXUAAAAaZJREFUOE99kj9r
         FFEUxScatTNBEW23VIyCSIKNm0YQO5Gpdufd33lvmW4+w1jYWAgWlqKF2CgpooWCX0BFkBSiIiSSRBBU
         tDAERbPhhjHMbuGFA/O4f865506W/SeAe8CZuq73jOfaMSHpSErpeIzxZIzxLPDZzN7EGK8Mh8OJkeo8
         z/dKOtFM/wFsOCQ5tiQNgS+SLo80uxRgCfgt6bWkR8CiQ9KmN0paNbNeWZZTIYRTVVUd8Mbrkv6Y2f1+
@@ -135,20 +135,8 @@
         AAAAAElFTkSuQmCC
 </value>
   </data>
-  <data name="menuStrip1.TrayLocation" type="System.Drawing.Point, System.Drawing">
-    <value>104, 17</value>
-  </data>
-  <data name="Notification.TrayLocation" type="System.Drawing.Point, System.Drawing">
-    <value>219, 17</value>
-  </data>
-  <data name="pushToTalkKeyTimer.TrayLocation" type="System.Drawing.Point, System.Drawing">
-    <value>332, 17</value>
-  </data>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
   <data name="$this.Icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources/Images/hasc-icon.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Notification.Icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources/Images/hasc-icon.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+    <value>../Images/hasc-icon.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>
