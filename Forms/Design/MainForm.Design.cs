@@ -3,6 +3,7 @@
 using System.ComponentModel;
 // Also, declaring aliases for the same reason.
 using Timer = System.Windows.Forms.Timer;
+using static HASCore.Soundboard.XMLSettings;
 
 namespace HASCore.Forms;
 
@@ -621,8 +622,8 @@ public partial class MainForm
 		// 
 		// HoldRepeatTimer
 		// 
-		this.HoldRepeatTimer.Interval = 50; // Default value
-		this.HoldRepeatTimer.Enabled = true;
+		this.HoldRepeatTimer.Interval = DefaultHoldDelayInMs;
+		this.HoldRepeatTimer.Enabled = false;
 		this.HoldRepeatTimer.Tick += this.HoldRepeatTimer_Tick;
 
 		// List views

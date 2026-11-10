@@ -1,5 +1,7 @@
-﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.Runtime;
+using System.Runtime.InteropServices;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using Timer = System.Threading.Timer;
@@ -14,11 +16,23 @@ namespace HASCore.Soundboard;
 ///		This engine uses NAudio to mix and play audio through a selected output device.
 ///		It caches sounds in memory up to a configurable limit, evicting the least
 ///		recently used sounds when the cache is full. The cache is also cleared after
-///		a period of inactivity to free memory. The engine is thread‑safe and should
+///		a period of inactivity to free memory. The engine is thread-safe and should
 ///		be accessed via the <see cref="Instance"/> singleton.
 /// </remarks>
-internal class AudioPlaybackEngine : IDisposable
+internal partial class AudioPlaybackEngine : IDisposable
 {
+	/// Description
+	/// <summary>
+	///		Trims the working set of the specified process by setting its minimum and maximum working set sizes.
+	/// </summary>
+	/// <param name="hProcess">A handle to the process whose working set is to be trimmed.</param>
+	/// <param name="dwMinimumWorkingSetSize">The minimum working set size, in bytes.</param>
+	/// <param name="dwMaximumWorkingSetSize">The maximum working set size, in bytes.</param>
+	/// <returns><c>true</c> if the function succeeds; otherwise, <c>false</c>.</returns>
+	[LibraryImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial Boolean SetProcessWorkingSetSize(IntPtr hProcess, IntPtr dwMinimumWorkingSetSize, IntPtr dwMaximumWorkingSetSize);
+
 	#region Singleton Instance
 
 	/// Description
@@ -33,7 +47,7 @@ internal class AudioPlaybackEngine : IDisposable
 
 	/// Description
 	/// <summary>
-	///		Overhead for the cached sound object in bytes – approximate overhead per cache entry.
+	///		Overhead for the cached sound object in bytes - approximate overhead per cache entry.
 	/// </summary>
 	private const Int64 ObjectOverhead = 200;
 	/// Description
@@ -45,7 +59,7 @@ internal class AudioPlaybackEngine : IDisposable
 	/// <summary>
 	///		Force GC after evicting this many items
 	/// </summary>
-	private const Int32 GCThreshold = 20;
+	private const Int32 GCThreshold = 5;
 	private static readonly TimeSpan IdleTimeout = TimeSpan.FromMinutes(60);
 
 	#endregion
@@ -162,6 +176,13 @@ internal class AudioPlaybackEngine : IDisposable
 		GC.WaitForPendingFinalizers();
 		GC.Collect(2, GCCollectionMode.Forced, true, true);
 		GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.Default;
+
+		// Trim the working set so released pages are returned to the OS.
+		try
+		{
+			SetProcessWorkingSetSize(Process.GetCurrentProcess().Handle, -1, -1);
+		}
+		catch { } // Ignore trimming failures.
 	}
 
 	/// Description
@@ -180,15 +201,27 @@ internal class AudioPlaybackEngine : IDisposable
 			if (LRUList.Count == 0)
 				return false;
 
-			// Find the oldest item that is not protected.
+			// Find the oldest item that is not protected and not currently playing.
 			LinkedListNode<String>? node = LRUList.First;
-			while (node != null && protectedKey != null && node.Value == protectedKey)
+			while (node != null)
 			{
-				node = node.Next;
+				if (protectedKey != null && node.Value == protectedKey)
+				{
+					node = node.Next;
+					continue;
+				}
+
+				if (Cache.TryGetValue(node.Value, out CacheEntry? candidate) && IsSoundInUse(candidate.Sound))
+				{
+					node = node.Next;
+					continue;
+				}
+
+				break;
 			}
 
 			if (node == null)
-				return false; // All items are protected (shouldn't happen).
+				return false; // All items are protected or in use.
 
 			String oldestKey = node.Value;
 			if (Cache.TryRemove(oldestKey, out CacheEntry? removed))
@@ -216,6 +249,23 @@ internal class AudioPlaybackEngine : IDisposable
 
 	/// Description
 	/// <summary>
+	///		Determines whether the specified sound is currently being played by the mixer.
+	/// </summary>
+	private Boolean IsSoundInUse(CachedSound sound)
+	{
+		try
+		{
+			foreach (Object input in Mixer.MixerInputs)
+				if (input is CachedSoundSampleProvider provider && ReferenceEquals(provider.Sound, sound))
+					return true;
+		}
+		// Ignore enumeration errors; treat as not in use.
+		catch { }
+		return false;
+	}
+
+	/// Description
+	/// <summary>
 	///		Ensures the cache has enough space for a new sound, evicting LRU items as needed.
 	/// </summary>
 	/// <param name="soundSize">The size of the sound to be added, in bytes.</param>
@@ -234,9 +284,10 @@ internal class AudioPlaybackEngine : IDisposable
 			}
 
 			// Evict until we have enough space.
-			while (TotalCacheSizeInBytes + soundSize > MaxCacheSizeInBytes && LRUList.Count > 0)
+			Boolean progress = true;
+			while (progress && TotalCacheSizeInBytes + soundSize > MaxCacheSizeInBytes && LRUList.Count > 0)
 			{
-				EvictLeastRecentlyUsed(null); // No protected key when adding new items.
+				progress = EvictLeastRecentlyUsed(null); // No protected key when adding new items.
 			}
 		}
 	}
@@ -252,33 +303,18 @@ internal class AudioPlaybackEngine : IDisposable
 
 		lock (CacheLock)
 		{
+			// If an entry already exists (race), remove its accounting first.
+			if (Cache.TryGetValue(fileName, out CacheEntry? existing))
+			{
+				TotalCacheSizeInBytes -= existing.SizeInBytes;
+				LRUList.Remove(fileName);
+			}
+
 			CacheEntry entry = new(sound);
 			Cache[fileName] = entry;
 			TotalCacheSizeInBytes += entry.SizeInBytes;
+			LRUList.Remove(fileName);
 			LRUList.AddLast(fileName); // Mark as most recent.
-		}
-	}
-
-	/// Description
-	/// <summary>
-	///		Marks a sound as accessed (moves it to the end of the LRU list) and evicts
-	///		items if the cache exceeds its limit (protecting the accessed item).
-	/// </summary>
-	private void MarkAccessed(String fileName)
-	{
-		lock (CacheLock)
-		{
-			// Move to end (mark as most recent).
-			if (LRUList.Remove(fileName))
-			{
-				LRUList.AddLast(fileName);
-			}
-
-			// Evict items if cache is over the limit, but protect the one we just accessed.
-			while (TotalCacheSizeInBytes > MaxCacheSizeInBytes && LRUList.Count > 1)
-			{
-				EvictLeastRecentlyUsed(fileName);
-			}
 		}
 	}
 
@@ -300,18 +336,22 @@ internal class AudioPlaybackEngine : IDisposable
 	/// </summary>
 	/// <param name="input">The input provider.</param>
 	/// <returns>A provider with the correct channel count.</returns>
-	/// <exception cref="NotImplementedException">
-	///		Thrown if the channel conversion is not implemented.
-	/// </exception>
-	private ISampleProvider ConvertToRightChannelCount(ISampleProvider input)
+	private ISampleProvider ConvertToRightChannelCount(WdlResamplingSampleProvider input)
 	{
 		if (input.WaveFormat.Channels == Mixer.WaveFormat.Channels)
 			return input;
 
+		// Mono to stereo (and other upmixing) via a dedicated provider.
 		if (input.WaveFormat.Channels == 1 && Mixer.WaveFormat.Channels == 2)
 			return new MonoToStereoSampleProvider(input);
 
-		throw new NotImplementedException("Not yet implemented this channel count conversion");
+		// Stereo to mono via a dedicated provider.
+		if (input.WaveFormat.Channels == 2 && Mixer.WaveFormat.Channels == 1)
+			return new StereoToMonoSampleProvider(input);
+
+		// Generic fallback: downmix all input channels to mono and
+		// replicate the result across every output channel.
+		return new ChannelConvertingSampleProvider(input, Mixer.WaveFormat.Channels);
 	}
 
 	/// Description
@@ -332,7 +372,7 @@ internal class AudioPlaybackEngine : IDisposable
 	/// <summary>
 	///		Initialises the audio output device.
 	/// </summary>
-	/// <param name="deviceNumber">The zero‑based index of the audio device to use.</param>
+	/// <param name="deviceNumber">The zero-based index of the audio device to use.</param>
 	public void Init(Int32 deviceNumber)
 	{
 		OutputDevice?.Dispose();
@@ -356,15 +396,33 @@ internal class AudioPlaybackEngine : IDisposable
 	{
 		LastPlayTime = DateTime.Now;
 
-		// Try to get from cache.
-		if (Cache.TryGetValue(fileName, out CacheEntry? entry))
+		CachedSound? soundToPlay = null;
+
+		// Fast path: cache hit under lock.
+		lock (CacheLock)
 		{
-			MarkAccessed(fileName);
-			PlaySound(entry.Sound);
+			if (Cache.TryGetValue(fileName, out CacheEntry? entry))
+			{
+				// Move to end (mark as most recent).
+				if (LRUList.Remove(fileName))
+					LRUList.AddLast(fileName);
+
+				// Evict items if cache is over the limit, protecting this one.
+				Boolean progress = true;
+				while (progress && TotalCacheSizeInBytes > MaxCacheSizeInBytes && LRUList.Count > 1)
+					progress = EvictLeastRecentlyUsed(fileName);
+
+				soundToPlay = entry.Sound;
+			}
+		}
+
+		if (soundToPlay is not null)
+		{
+			PlaySound(soundToPlay);
 			return;
 		}
 
-		// Not cached – load, cache, then play.
+		// Not cached - load, cache, then play.
 		CachedSound sound = new(fileName);
 		AddToCache(fileName, sound);
 		PlaySound(sound);
@@ -372,7 +430,7 @@ internal class AudioPlaybackEngine : IDisposable
 
 	/// Description
 	/// <summary>
-	///		Plays a pre‑cached sound.
+	///		Plays a pre-cached sound.
 	/// </summary>
 	/// <param name="sound">The <see cref="CachedSound"/> to play.</param>
 	public void PlaySound(CachedSound sound)

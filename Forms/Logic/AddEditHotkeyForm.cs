@@ -24,7 +24,7 @@ public partial class AddEditHotkeyForm : Form
 	/// <summary>
 	/// An enumerable for handling the focus of the TextBox controls on the form.
 	/// </summary>
-	private IEnumerable<TextBox> _tbControls;
+	private readonly IEnumerable<TextBox> _tbControls;
 	/// <summary>
 	/// A record for the data that will be written as an item of ListView.
 	/// </summary>
@@ -239,7 +239,6 @@ public partial class AddEditHotkeyForm : Form
 			// Otherwise, add new entry based on the data user provided.
 			else
 			{
-				// 
 				ListViewItem item = new (keysTextBox?.Text);
 				item.SubItems.Add(locationTextBox?.Text);
 

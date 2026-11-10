@@ -14,6 +14,13 @@ public record SoundHotkeyEditData(String Keys, String SoundLocation, String? Win
 
 public class XMLSettings
 {
+	/// Description
+	/// <summary>
+	///		Default delay in milliseconds between repeated sound plays
+	///		while a hotkey is held down.
+	/// </summary>
+	public const Int32 DefaultHoldDelayInMs = 500;
+
 	readonly static SoundboardSettings DEFAULT_SOUNDBOARD_SETTINGS = new (
 		enableSoundboardKeys: [],
 		stopSoundKeys: [],
@@ -21,7 +28,7 @@ public class XMLSettings
 		minimizeToTray: true,
 		playOverEachother: false,
 		repeatOnHold: false,
-		delayInMs: 500,
+		delayInMs: DefaultHoldDelayInMs,
 		lastLoopbackDevice: String.Empty,
 		lastPlaybackDevice: String.Empty
 	);
@@ -200,7 +207,7 @@ public class XMLSettings
 
 			settings.LastLoopbackDevice ??= String.Empty;
 
-			settings.DelayInMs ??= 500;
+			settings.DelayInMs ??= DefaultHoldDelayInMs;
 
 			CurrentSettings = settings;
 		}

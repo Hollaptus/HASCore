@@ -55,7 +55,7 @@ public partial class SettingsForm : Form
 	///		which recursively retrieves all controls including those inside
 	///		containers like <see cref="GroupBox"/> or <see cref="Panel"/>.
 	/// </remarks>
-	private IEnumerable<TextBox> _tbControls;
+	private readonly IEnumerable<TextBox> _tbControls;
 
 	/// Description
 	/// <summary>
@@ -184,6 +184,26 @@ public partial class SettingsForm : Form
 		repeatOnHoldCheckBox?.Checked = CurrentSettings is not null
 			&& CurrentSettings.RepeatOnHold.HasValue
 			&& CurrentSettings.RepeatOnHold.Value;
+
+		if (holdDelayNumeric is not null)
+		{
+			// Showing the allowed range as a tooltip on the delay control.
+			ToolTip delayToolTip = new ();
+			delayToolTip.SetToolTip(holdDelayNumeric, "Allowed range: 50-1000 ms");
+			
+			// Loading the persisted hold delay into the numeric control
+			// and enabling/disabling it based on the repeat-on-hold state.
+			if (CurrentSettings?.DelayInMs is Int32 delay)
+			{
+				if (delay < holdDelayNumeric.Minimum)
+					delay = (Int32)holdDelayNumeric.Minimum;
+				if (delay > holdDelayNumeric.Maximum)
+					delay = (Int32)holdDelayNumeric.Maximum;
+				holdDelayNumeric.Value = delay;
+			}
+
+			holdDelayNumeric.Enabled = repeatOnHoldCheckBox?.Checked ?? false;
+		}
 	}
 
 	#endregion
@@ -208,7 +228,7 @@ public partial class SettingsForm : Form
 	/// 
 	/// Parameters
 	/// <param name="sender">The source of the event.</param>
-	/// <param name="e">An <see cref="EventArgs"/> that contains no event data.</param>
+	/// <param name="e">An <see cref="EventArgs"/> that contains the event data.</param>
 	/// 
 	/// Additional information
 	/// <remarks>
@@ -244,7 +264,7 @@ public partial class SettingsForm : Form
 	/// 
 	/// Additional information
 	/// <remarks>
-	///		Opens the <see cref="AddEditHotkeyForm"/> in "Edit" mode, pre‑populated with
+	///		Opens the <see cref="AddEditHotkeyForm"/> in "Edit" mode, pre-populated with
 	///		the selected preset's data. The form is only opened if exactly one item is
 	///		selected in <see cref="KeysLocationsListView"/>.
 	/// </remarks>
@@ -359,6 +379,7 @@ public partial class SettingsForm : Form
 				CurrentSettings.MinimizeToTray			= minimizeToTrayCheckBox?.Checked ?? false;
 				CurrentSettings.PlayOverEachother		= playOverEachotherCheckBox?.Checked ?? false;
 				CurrentSettings.RepeatOnHold			= repeatOnHoldCheckBox?.Checked ?? false;
+				CurrentSettings.DelayInMs				= (Int32)(holdDelayNumeric?.Value ?? DefaultHoldDelayInMs);
 
 				// Calling the procedure to save changes.
 				SaveSoundboardSettingsXML();
@@ -406,7 +427,7 @@ public partial class SettingsForm : Form
 	/// 
 	/// Parameters
 	/// <param name="sender">The source of the event.</param>
-	/// <param name="e">An <see cref="EventArgs"/> that contains no event data.</param>
+	/// <param name="e">An <see cref="EventArgs"/> that contains the event data.</param>
 	/// 
 	/// Additional information
 	/// <remarks>
@@ -417,7 +438,55 @@ public partial class SettingsForm : Form
 
 	/// Description
 	/// <summary>
-	///		Handles the <see cref="Control.MouseDoubleClick"/> event of
+	///		Handles the <see cref="CheckBox.CheckedChanged"/> event of
+	///		<see cref="repeatOnHoldCheckBox">RepeatOnHoldCheckBox</see>.
+	/// </summary>
+	/// 
+	/// Parameters
+	/// <param name="sender">The source of the event.</param>
+	/// <param name="e">An <see cref="EventArgs"/> that contains the event data.</param>
+	/// 
+	/// Additional information
+	/// <remarks>
+	///		Enables <see cref="holdDelayNumeric"/> only when repeating on hold is enabled.
+	/// </remarks>
+	private void RepeatOnHoldCheckBox_CheckedChanged(Object? sender, EventArgs e)
+		=> holdDelayNumeric?.Enabled = repeatOnHoldCheckBox?.Checked ?? false;
+
+	/// Description
+	/// <summary>
+	///		Handles the <see cref="Control.TextChanged"/> event of
+	///		<see cref="holdDelayNumeric">HoldDelayNumeric</see>.
+	/// </summary>
+	/// 
+	/// Parameters
+	/// <param name="sender">The source of the event.</param>
+	/// <param name="e">An <see cref="EventArgs"/> that contains no event data.</param>
+	/// 
+	/// Additional information
+	/// <remarks>
+	///		Highlights the control when the entered value is outside the allowed range.
+	/// </remarks>
+	private void HoldDelayNumeric_TextChanged(Object? sender, EventArgs e)
+	{
+		if (holdDelayNumeric is null) return;
+
+		// Highlighting the control if the typed value is out of range.
+		if (Decimal.TryParse(holdDelayNumeric.Text, out Decimal value))
+		{
+			Boolean inRange = value >= holdDelayNumeric.Minimum
+				&& value <= holdDelayNumeric.Maximum;
+			holdDelayNumeric.BackColor = inRange
+				? SystemColors.Window
+				: Color.MistyRose;
+		}
+		else
+		{
+			holdDelayNumeric.BackColor = SystemColors.Window;
+		}
+	}
+
+	/// Description
 	///		<see cref="KeysLocationsListView">KeysLocationsListView</see>.
 	/// </summary>
 	/// 
@@ -427,8 +496,8 @@ public partial class SettingsForm : Form
 	/// 
 	/// Additional information
 	/// <remarks>
-	///		Double‑clicking an entry in the list view has the same effect as pressing
-	///		the <see cref="editButton"/> – it opens the edit dialog for that entry.
+	///		Double-clicking an entry in the list view has the same effect as pressing
+	///		the <see cref="editButton"/> - it opens the edit dialog for that entry.
 	/// </remarks>
 	private void KeysLocationsListView_MouseDoubleClick(Object? sender, MouseEventArgs e)
 		=> EditButton_Click(sender, e); // Rerouting to an event of "EditButton"

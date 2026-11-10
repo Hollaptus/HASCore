@@ -1,6 +1,7 @@
 ﻿// Explicitly declaring libraries that will be used
 // so we don't have gigantic lines of code of library imports.
 using System.ComponentModel;
+using static HASCore.Soundboard.XMLSettings;
 
 namespace HASCore.Forms;
 
@@ -12,7 +13,7 @@ namespace HASCore.Forms;
 /// </summary>
 /// <remarks>
 ///		<para>
-///			This form allows the user to view, add, edit, and remove XML‑based sound presets,
+///			This form allows the user to view, add, edit, and remove XML-based sound presets,
 ///			change global hotkeys (stop all sounds, toggle soundboard enabled), and adjust
 ///			playback behaviour (minimise to tray, overlapping sounds, repeat on hold).
 ///		</para>
@@ -346,6 +347,7 @@ partial class SettingsForm
 		this.repeatOnHoldCheckBox.TabIndex = 5;
 		this.repeatOnHoldCheckBox.Text = "Allow repeating sounds on holding the hotkey";
 		this.repeatOnHoldCheckBox.UseVisualStyleBackColor = true;
+		this.repeatOnHoldCheckBox.CheckedChanged += this.RepeatOnHoldCheckBox_CheckedChanged;
 
 		// Textboxes
 		
@@ -380,8 +382,9 @@ partial class SettingsForm
 		this.holdDelayNumeric.TabIndex = 6;
 		this.holdDelayNumeric.Minimum = 50;
 		this.holdDelayNumeric.Maximum = 1000;
-		this.holdDelayNumeric.Value = 500;
+		this.holdDelayNumeric.Value = DefaultHoldDelayInMs;
 		this.holdDelayNumeric.Enabled = false;
+		this.holdDelayNumeric.TextChanged += this.HoldDelayNumeric_TextChanged;
 
 		// List views
 

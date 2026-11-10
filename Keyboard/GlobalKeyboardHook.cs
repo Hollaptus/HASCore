@@ -7,7 +7,7 @@ namespace HASCore.Keyboard;
 /// 
 /// Additional information
 /// <remarks>
-///		This class uses a low‑level keyboard hook to capture keyboard events system‑wide.
+///		This class uses a low-level keyboard hook to capture keyboard events system-wide.
 ///		It maintains a set of currently pressed keys and raises the <see cref="KeysChanged"/>
 ///		event whenever the set changes. The hook must be initialized once before use.
 /// </remarks>
@@ -33,7 +33,7 @@ public static class GlobalKeyboardHook
 
 	/// Description
 	/// <summary>
-	///		The underlying <see cref="KeyboardHook"/> instance that provides low‑level events.
+	///		The underlying <see cref="KeyboardHook"/> instance that provides low-level events.
 	/// </summary>
 	private static KeyboardHook? _hook;
 
@@ -55,6 +55,18 @@ public static class GlobalKeyboardHook
 
 	/// Description
 	/// <summary>
+	///		Synchronizes the logical pressed-key set with the physical key state,
+	///		removing any keys that are no longer actually held down.
+	/// </summary>
+	public static void SyncPressedKeys()
+	{
+		foreach (Keys key in _pressedKeys.ToList())
+			if (!KeyboardHook.IsPhysicallyDown(key))
+				_pressedKeys.Remove(key);
+	}
+
+	/// Description
+	/// <summary>
 	///		Determines whether the specified key is currently being held down.
 	/// </summary>
 	/// 
@@ -63,7 +75,14 @@ public static class GlobalKeyboardHook
 	/// 
 	/// Return value
 	/// <returns><c>true</c> if the key is currently pressed; otherwise, <c>false</c>.</returns>
-	public static Boolean IsKeyDown(Keys key) => _pressedKeys.Contains(key);
+	public static Boolean IsKeyDown(Keys key)
+	{
+		// Query the physical key state so a key that was missed by the hook
+		// (and is stuck in the logical set) does not stay "pressed".
+		Boolean isDown = KeyboardHook.IsPhysicallyDown(key);
+		if (!isDown) _pressedKeys.Remove(key);
+		return isDown;
+	}
 
 	/// Description
 	/// <summary>

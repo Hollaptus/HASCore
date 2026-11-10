@@ -129,10 +129,12 @@ public class Conversions
 	///		Function to convert a set that is <see cref="IEnumerable"/> of <see cref="Keys"/> into a <see cref="String"/>.  
 	/// </summary>
 	/// 
+	/// Parameters
 	/// <param name="keys">
 	///		A set of keys that need to be converted to a <see cref="String"/> representation.
 	/// </param>
 	/// 
+	/// Return value
 	/// <returns>
 	///		A <see cref="String"/> of combined keys with '+' separator.
 	/// </returns>

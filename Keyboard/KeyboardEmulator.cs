@@ -1,7 +1,8 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 
 namespace HASCore.Keyboard;
 
+/// Description
 /// <summary>
 ///		Provides methods for emulating keyboard input at the system level.
 /// </summary>
@@ -11,7 +12,7 @@ namespace HASCore.Keyboard;
 ///		individual key presses or releases using scan codes to avoid issues with
 ///		extended keys (e.g., right Alt, right Ctrl).
 /// </remarks>
-public static class KeyboardEmulator
+public static partial class KeyboardEmulator
 {
 	#region WinAPI Constants and Imports
 
@@ -24,6 +25,7 @@ public static class KeyboardEmulator
 	// Translation type for MapVirtualKey.
 	private const UInt32	MAPVK_VK_TO_VSC		= 0x00;
 
+	/// Description
 	/// <summary>
 	///		Synthesizes keystrokes, mouse motions, and button clicks.
 	/// </summary>
@@ -47,9 +49,10 @@ public static class KeyboardEmulator
 	///		If the function returns zero, the input was blocked by another thread.
 	///		To get extended error information, call <see cref="Marshal.GetLastWin32Error"/>.
 	/// </returns>
-	[DllImport("user32.dll", SetLastError = true)]
-	private static extern UInt32 SendInput(UInt32 nInputs, INPUT[] pInputs, Int32 cbSize);
+	[LibraryImport("user32.dll", SetLastError = true)]
+	private static partial UInt32 SendInput(UInt32 nInputs, INPUT[] pInputs, Int32 cbSize);
 
+	/// Description
 	/// <summary>
 	///		Retrieves the extra message information for the current thread.
 	/// </summary>
@@ -61,19 +64,20 @@ public static class KeyboardEmulator
 	/// <returns>
 	///		The extra message information as an <see cref="IntPtr"/>.
 	/// </returns>
-	[DllImport("user32.dll")]
-	private static extern IntPtr GetMessageExtraInfo();
+	[LibraryImport("user32.dll")]
+	private static partial IntPtr GetMessageExtraInfo();
 
+	/// Description
 	/// <summary>
-	///		Translates a virtual‑key code into a scan code or character value.
+	///		Translates a virtual-key code into a scan code or character value.
 	/// </summary>
 	/// <remarks>
 	///		This function is used to obtain the hardware scan code corresponding
-	///		to a given virtual key, which is necessary when using scan‑code
+	///		to a given virtual key, which is necessary when using scan-code
 	///		based keyboard input via <c>SendInput</c>.
 	/// </remarks>
 	/// <param name="uCode">
-	///		The virtual‑key code to translate.
+	///		The virtual-key code to translate.
 	/// </param>
 	/// <param name="uMapType">
 	///		The translation to perform. Must be <c>MAPVK_VK_TO_VSC</c> (0x00)
@@ -82,32 +86,37 @@ public static class KeyboardEmulator
 	/// <returns>
 	///		The scan code corresponding to the specified virtual key.
 	/// </returns>
-	[DllImport("user32.dll")]
-	private static extern UInt32 MapVirtualKey(UInt32 uCode, UInt32 uMapType);
+	[LibraryImport("user32.dll")]
+	private static partial UInt32 MapVirtualKey(UInt32 uCode, UInt32 uMapType);
 
 	#endregion
 
 	#region Private Structures
 
+	/// Description
 	/// <summary>
 	///		Structure representing a keyboard input event.
 	/// </summary>
 	[StructLayout(LayoutKind.Sequential)]
 	private struct KEYBDINPUT
 	{
-		public UInt16 wVk;			// Virtual‑key code (0 if using scan code).
+		public UInt16 wVk;			// Virtual-key code (0 if using scan code).
 		public UInt16 wScan;		// Hardware scan code.
 		public UInt32 dwFlags;		// Flags (key down/up, scancode flag, etc.).
 		public UInt32 time;			// Timestamp (0 = system provides).
-		public IntPtr dwExtraInfo;	// Additional application‑defined data.
+		public IntPtr dwExtraInfo;	// Additional application-defined data.
 	}
 
+	/// Description
 	/// <summary>
 	///		Structure for a generic input event (keyboard, mouse, or hardware).
 	/// </summary>
+	[StructLayout(LayoutKind.Explicit, Size = 40)]
 	private struct INPUT
 	{
+		[FieldOffset(0)]
 		public Int32 type;			// Type of input (INPUT_KEYBOARD, etc.).
+		[FieldOffset(8)]
 		public KEYBDINPUT ki;		// Keyboard input data.
 	}
 
@@ -115,6 +124,7 @@ public static class KeyboardEmulator
 
 	#region Public Methods
 
+	/// Description
 	/// <summary>
 	///		Emulates a single key press or release.
 	/// </summary>
@@ -128,7 +138,7 @@ public static class KeyboardEmulator
 	///		otherwise, <c>false</c>.
 	/// </returns>
 	/// <remarks>
-	///		This method uses scan codes instead of virtual‑key codes to avoid
+	///		This method uses scan codes instead of virtual-key codes to avoid
 	///		issues with extended keys (e.g., right Alt, right Ctrl). The
 	///		system's extra info is automatically filled via
 	///		<see cref="GetMessageExtraInfo"/>.

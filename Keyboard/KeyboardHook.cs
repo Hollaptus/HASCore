@@ -5,7 +5,7 @@ namespace HASCore.Keyboard;
 
 /// Description
 /// <summary>
-///		Provides a low‑level global keyboard hook that captures key press and release events.
+///		Provides a low-level global keyboard hook that captures key press and release events.
 /// </summary>
 /// <remarks>
 ///		This class wraps the Windows <c>SetWindowsHookEx</c> API to install a
@@ -13,7 +13,7 @@ namespace HASCore.Keyboard;
 ///		events for each physical key event, and maintains a set of currently pressed keys
 ///		to avoid duplicate events.
 /// </remarks>
-public class KeyboardHook : IDisposable
+public partial class KeyboardHook : IDisposable
 {
 	#region WinAPI Constants and Imports
 
@@ -53,7 +53,7 @@ public class KeyboardHook : IDisposable
 	/// </summary>
 	/// <remarks>
 	///		This function is used to obtain the base address of the current process's
-	///		main module, which is required when installing a low‑level hook with
+	///		main module, which is required when installing a low-level hook with
 	///		<see cref="SetWindowsHookEx"/>.
 	/// </remarks>
 	/// <param name="lpModuleName">
@@ -63,15 +63,15 @@ public class KeyboardHook : IDisposable
 	/// <returns>
 	///		A handle to the specified module, or <see cref="IntPtr.Zero"/> on failure.
 	/// </returns>
-	[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-	private static extern IntPtr GetModuleHandle(String lpModuleName);
+	[LibraryImport("kernel32.dll", EntryPoint = "GetModuleHandleW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+	private static partial IntPtr GetModuleHandle(String lpModuleName);
 
 	/// Description
 	/// <summary>
 	///		Installs a hook procedure into the Windows hook chain.
 	/// </summary>
 	/// <remarks>
-	///		This function sets a low‑level keyboard hook (<c>WH_KEYBOARD_LL</c>)
+	///		This function sets a low-level keyboard hook (<c>WH_KEYBOARD_LL</c>)
 	///		that monitors keyboard input globally.
 	/// </remarks>
 	/// <param name="idHook">
@@ -85,13 +85,13 @@ public class KeyboardHook : IDisposable
 	/// </param>
 	/// <param name="dwThreadId">
 	///		The identifier of the thread with which the hook is to be associated.
-	///		For low‑level global hooks, this must be <c>0</c>.
+	///		For low-level global hooks, this must be <c>0</c>.
 	/// </param>
 	/// <returns>
 	///		A handle to the hook if successful; otherwise, <see cref="IntPtr.Zero"/>.
 	/// </returns>
-	[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-	private static extern IntPtr SetWindowsHookEx(
+	[LibraryImport("user32.dll", EntryPoint = "SetWindowsHookExW", SetLastError = true)]
+	private static partial IntPtr SetWindowsHookEx(
 		Int32 idHook,
 		LowLevelKeyboardProc lpfn,
 		IntPtr hMod,
@@ -106,9 +106,9 @@ public class KeyboardHook : IDisposable
 	/// <returns>
 	///		<c>true</c> if the hook was successfully removed; otherwise, <c>false</c>.
 	/// </returns>
-	[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+	[LibraryImport("user32.dll", SetLastError = true)]
 	[return: MarshalAs(UnmanagedType.Bool)]
-	private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+	private static partial bool UnhookWindowsHookEx(IntPtr hhk);
 
 	/// Description
 	/// <summary>
@@ -125,13 +125,24 @@ public class KeyboardHook : IDisposable
 	/// <returns>
 	///		The return value from the next hook procedure in the chain.
 	/// </returns>
-	[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-	private static extern IntPtr CallNextHookEx(
+	[LibraryImport("user32.dll", SetLastError = true)]
+	private static partial IntPtr CallNextHookEx(
 		IntPtr hhk,
 		Int32 nCode,
 		IntPtr wParam,
 		IntPtr lParam
 	);
+
+	/// Description
+	/// <summary>
+	///		Retrieves the status of the specified virtual key.
+	/// </summary>
+	/// <param name="vKey">The virtual-key code to query.</param>
+	/// <returns>
+	///		A value whose high-order bit (0x8000) is set when the key is currently held down.
+	/// </returns>
+	[LibraryImport("user32.dll")]
+	private static partial Int16 GetAsyncKeyState(Int32 vKey);
 
 	#endregion
 
@@ -144,7 +155,7 @@ public class KeyboardHook : IDisposable
 	/// <remarks>
 	///		The event provides the virtual key code as a <see cref="Keys"/> value.
 	///		The event is raised only once per physical key down, even if the key
-	///		is held down (auto‑repeat is filtered).
+	///		is held down (auto-repeat is filtered).
 	/// </remarks>
 	public event EventHandler<Keys>? KeyDown;
 
@@ -226,7 +237,7 @@ public class KeyboardHook : IDisposable
 	///		Starts the global keyboard hook.
 	/// </summary>
 	/// <remarks>
-	///		This method installs the low‑level hook using <see cref="SetWindowsHookEx"/>.
+	///		This method installs the low-level hook using <see cref="SetWindowsHookEx"/>.
 	///		If the hook is already running, the call does nothing.
 	/// </remarks>
 	/// <exception cref="InvalidOperationException">
@@ -255,7 +266,7 @@ public class KeyboardHook : IDisposable
 	/// <remarks>
 	///		After stopping, the hook will no longer capture events. The <see cref="KeyDown"/>
 	///		and <see cref="KeyUp"/> events will no longer be raised. This method also clears
-	///		the internal pressed‑keys set and any deferred state.
+	///		the internal pressed-keys set and any deferred state.
 	/// </remarks>
 	public void Stop()
 	{
@@ -267,6 +278,21 @@ public class KeyboardHook : IDisposable
 		_pressedKeys.Clear();
 		_deferredControlKey = null;
 	}
+
+	/// Description
+	/// <summary>
+	///		Determines whether the specified key is currently physically held down.
+	/// </summary>
+	/// <param name="key">The key to query.</param>
+	/// <returns>
+	///		<c>true</c> if the key is currently down; otherwise, <c>false</c>.
+	/// </returns>
+	/// <remarks>
+	///		This queries the operating system directly via <see cref="GetAsyncKeyState"/>,
+	///		so it reflects the physical keyboard state even if a key-up event was missed.
+	/// </remarks>
+	public static Boolean IsPhysicallyDown(Keys key)
+		=> (GetAsyncKeyState((Int32)key) & 0x8000) != 0; // 0x8000 is the high-order bit set when the key is down.
 
 	/// Description
 	/// <summary>
@@ -341,31 +367,31 @@ public class KeyboardHook : IDisposable
 	///			<list type="bullet">
 	///				<item>
 	///					<description>
-	///						Chromium – https://codereview.chromium.org/1416233002
+	///						Chromium - https://codereview.chromium.org/1416233002
 	///						(Documents the AltGr keydown/keyup cycle)
 	///					</description>
 	///				</item>
 	///				<item>
 	///					<description>
-	///						QEMU – https://github.com/ispras/qemu/commit/2df9f57
+	///						QEMU - https://github.com/ispras/qemu/commit/2df9f57
 	///						("removes the extra left control key up/down input events")
 	///					</description>
 	///				</item>
 	///				<item>
 	///					<description>
-	///						SDL – https://github.com/libsdl-org/SDL/commit/f62a1be
+	///						SDL - https://github.com/libsdl-org/SDL/commit/f62a1be
 	///						("Fix spurious LCtrl on RAlt key pressed")
 	///					</description>
 	///				</item>
 	///				<item>
 	///					<description>
-	///						Zed Editor – https://github.com/zed-industries/zed/commit/15580a8
+	///						Zed Editor - https://github.com/zed-industries/zed/commit/15580a8
 	///						("AltGr is emulated as Right Alt + synthetic Left Ctrl")
 	///					</description>
 	///				</item>
 	///				<item>
 	///					<description>
-	///						VirtualBox – https://github.com/VirtualBox/virtualbox/commit/39ea180
+	///						VirtualBox - https://github.com/VirtualBox/virtualbox/commit/39ea180
 	///						("FE/Qt: win: improved AltGr handling.")
 	///					</description>
 	///				</item>
@@ -375,7 +401,7 @@ public class KeyboardHook : IDisposable
 	private IntPtr HookCallback(Int32 nCode, IntPtr wParam, IntPtr lParam)
 	{
 		// -------------------------------------------------------------------------
-		//	REMARK – AltGr Filter Implementation History
+		//	REMARK - AltGr Filter Implementation History
 		// -------------------------------------------------------------------------
 		// This Chromium-style approach was chosen after testing several alternatives.
 		//
@@ -438,10 +464,16 @@ public class KeyboardHook : IDisposable
 		// Handle key down events
 		if (isKeyDown)
 		{
-			// LControlKey down -> defer it.
-			// We wait to see if the next event is RMenu (Right Alt).
+			// LControlKey down -> defer it, but only for a genuine new press.
+			// If LControl is already held (auto-repeat or a second physical
+			// press while still down), do not re-defer: re-deferring would
+			// cause the eventual KeyUp to be swallowed, leaving LControl stuck
+			// in the pressed set and making related hotkeys fire spuriously.
 			if (key == Keys.LControlKey)
 			{
+				if (_pressedKeys.Contains(Keys.LControlKey))
+					return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
+
 				_deferredControlKey = key;
 				return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
 			}
@@ -478,9 +510,12 @@ public class KeyboardHook : IDisposable
 		{
 			// LControlKey up -> if we had a deferred LControlKey, this is a
 			// synthetic AltGr release, we discard it. Otherwise, it's a real release.
+			// Guard: if LControl is actually in the pressed set (e.g. a real key
+			// that was never deferred), never swallow the up event, otherwise the
+			// key would stay stuck in the pressed set.
 			if (key == Keys.LControlKey)
 			{
-				if (_deferredControlKey == Keys.LControlKey)
+				if (_deferredControlKey == Keys.LControlKey && !_pressedKeys.Contains(Keys.LControlKey))
 				{
 					// Synthetic AltGr release - just clear the deferred state.
 					_deferredControlKey = null;
@@ -488,6 +523,7 @@ public class KeyboardHook : IDisposable
 				}
 
 				// Real LControlKey release.
+				_deferredControlKey = null;
 				RaiseKeyEvent(key, false);
 				return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
 			}

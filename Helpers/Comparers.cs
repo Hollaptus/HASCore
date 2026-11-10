@@ -33,7 +33,7 @@ public class Comparers
 			if (x.Keys is null) return -1;
 			if (y.Keys is null) return 1;
 
-			// Both Keys are non‑null – compare their string representations
+			// Both Keys are non-null - compare their string representations
 			return String.Compare(Conversions.KeysToString(x.Keys), Conversions.KeysToString(y.Keys), StringComparison.Ordinal);
 		}
 	}

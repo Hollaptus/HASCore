@@ -18,10 +18,10 @@ namespace HASCore.Forms;
 /// 
 /// Additional information
 /// <remarks>
-///		This partial class works together with the designer‑generated code
+///		This partial class works together with the designer-generated code
 ///		(<see cref="InitializeComponent"/>) to provide the full main window.
 ///		It manages the soundboard's core functionality: loading XML presets,
-///		playing sounds via hotkeys, handling push‑to‑talk, loopback recording,
+///		playing sounds via hotkeys, handling push-to-talk, loopback recording,
 ///		and device management. The form also handles global keyboard input via
 ///		<see cref="GlobalKeyboardHook"/> and integrates with the
 ///		<see cref="AudioPlaybackEngine"/>.
@@ -64,13 +64,13 @@ public partial class MainForm : Form
 
 	/// Description
 	/// <summary>
-	///		The key assigned for the push‑to‑talk functionality.
+	///		The key assigned for the push-to-talk functionality.
 	/// </summary>
 	private Keys _pushToTalkKey;
 
 	/// Description
 	/// <summary>
-	///		Flag indicating whether the push‑to‑talk key is currently released
+	///		Flag indicating whether the push-to-talk key is currently released
 	///		(used for simulating key press/release).
 	/// </summary>
 	private Boolean _keyUpPushToTalkKey = false;
@@ -216,7 +216,7 @@ public partial class MainForm : Form
 
 		// Initializing the "Interval" property of "HoldRepeatTimer"
 		// so we can set the delay between repeats on hold of hotkeys.
-		HoldRepeatTimer?.Interval = CurrentSettings.DelayInMs ?? 50;
+		HoldRepeatTimer?.Interval = CurrentSettings.DelayInMs ?? DefaultHoldDelayInMs;
 	}
 
 	#endregion
@@ -237,6 +237,7 @@ public partial class MainForm : Form
 		// of the memory allocated to it.
 		HoldRepeatTimer?.Stop();
 		HoldRepeatTimer?.Dispose();
+
 		// Unsubscribing from the event and
 		// calling the "Shutdown" procedure
 		// to dispose of the global hook.
@@ -254,7 +255,8 @@ public partial class MainForm : Form
 	/// <param name="e">An <see cref="EventArgs"/> that contains event data.</param>
 	private void MainForm_Resize(Object? sender, EventArgs? e)
 	{
-		if (this.WindowState == FormWindowState.Minimized)
+		if (this.WindowState == FormWindowState.Minimized
+			&& CurrentSettings.MinimizeToTray == true)
 		{
 			notificationIcon?.Visible = true;
 			this.Hide();
@@ -287,7 +289,7 @@ public partial class MainForm : Form
 
 	/// Description
 	/// <summary>
-	///		Handles the <see cref="AudioPlaybackEngine.AllInputEnded"/> event to release the push‑to‑talk key.
+	///		Handles the <see cref="AudioPlaybackEngine.AllInputEnded"/> event to release the push-to-talk key.
 	/// </summary>
 	/// 
 	/// Parameters
@@ -974,7 +976,7 @@ public partial class MainForm : Form
 	/// 
 	/// Additional information
 	/// <remarks>
-	///		Saves the current hotkey list to the already‑loaded XML file.
+	///		Saves the current hotkey list to the already-loaded XML file.
 	///		If no file is loaded, prompts the user for a location.
 	/// </remarks>
 	private void SaveButton_Click(Object? sender, EventArgs? e)
@@ -1093,7 +1095,7 @@ public partial class MainForm : Form
 	/// 
 	/// Additional information
 	/// <remarks>
-	///		Validates that a push‑to‑talk key has been assigned. If not, unchecks the checkbox.
+	///		Validates that a push-to-talk key has been assigned. If not, unchecks the checkbox.
 	/// </remarks>
 	private void EnablePushToTalkCheckBox_CheckedChanged(Object? sender, EventArgs? e)
 	{
@@ -1196,11 +1198,11 @@ public partial class MainForm : Form
 	/// <remarks>
 	///		This method processes global keyboard input and performs the following actions:
 	///		<list type="bullet">
-	///			<item>Captures the push‑to‑talk key when the corresponding text box is focused.</item>
+	///			<item>Captures the push-to-talk key when the corresponding text box is focused.</item>
 	///			<item>Toggles the soundboard enable state using the keys defined in <see cref="CurrentSettings.EnableSoundboardKeys"/>.</item>
 	///			<item>Stops all sounds using the keys defined in <see cref="CurrentSettings.StopSoundKeys"/>.</item>
 	///			<item>Matches pressed keys against loaded hotkeys and plays the corresponding sound(s).</item>
-	///			<item>Handles repeat‑on‑hold behavior.</item>
+	///			<item>Handles repeat-on-hold behavior.</item>
 	///			<item>Loads an XML preset if the pressed keys match a <see cref="LoadXMLFile"/> entry.</item>
 	///		</list>
 	/// </remarks>
@@ -1320,7 +1322,7 @@ public partial class MainForm : Form
 							_holdKeys = [.. hotkey.Keys ?? []];
 							_currentHoldHotkey = hotkey;
 
-							HoldRepeatTimer?.Interval = CurrentSettings.DelayInMs ?? 50;
+							HoldRepeatTimer?.Interval = CurrentSettings.DelayInMs ?? DefaultHoldDelayInMs;
 
 							HoldRepeatTimer?.Start();
 						}
@@ -1395,6 +1397,13 @@ public partial class MainForm : Form
 		Boolean allPressed = _holdKeys.All(GlobalKeyboardHook.IsKeyDown);
 		if (!allPressed)
 		{
+			// Release the push-to-talk key if it was held.
+			if (_keyUpPushToTalkKey && _pushToTalkKey != Keys.None)
+			{
+				_keyUpPushToTalkKey = false;
+				KeyboardEmulator.SendKey(_pushToTalkKey, false);
+			}
+
 			// Keys down - stop repeating sounds.
 			HoldRepeatTimer?.Stop();
 			_holdKeys = null;
