@@ -511,7 +511,8 @@ public partial class MainForm : Form
 				
 				// Setting the parameters of the output.
 				_loopbackWaveOut ??= new ();
-				_loopbackWaveOut.DeviceNumber = loopbackDevicesComboBox.SelectedIndex;
+				// Using the playback devices combo box index for the output device.
+				_loopbackWaveOut.DeviceNumber = playbackDevicesComboBox?.SelectedIndex ?? 0;
 				_loopbackWaveOut.DesiredLatency = 125;
 				// Initialize output based on the provider.
 				_loopbackWaveOut.Init(_loopbackWaveProvider);

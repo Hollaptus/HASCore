@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net11.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -18,9 +18,39 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Update="Resources/resx/*.resx">
+    <!-- WinForms' ComponentResourceManager resolves a form's resources by the
+         form type's full name, so each XxxForm.resx must be embedded as
+         HASCore.Forms.<FormName>.resources. The *Form.resx glob also   keeps
+         non-form resources (like Icons.resx) out of this rule.
+         
+         REMARK: Could cause problems for a .resx whose file name   (excluding
+         extension) ends with "form" but which is not a form's   resources.
+         Wildcard * matches any prefix, so such files fall under this   rule - 
+         e.g. Platform.resx would silently get the same LogicalName. 
+    -->
+    <EmbeddedResource Update="Resources/resx/*Form.resx">
       <LogicalName>HASCore.Forms.%(Filename).resources</LogicalName>
     </EmbeddedResource>
+    <!-- Icons: strongly-typed class base name is HASCore.Resources.Icons -->
+    <EmbeddedResource Update="Resources\resx\Icons.resx">
+      <LogicalName>HASCore.Resources.Icons.resources</LogicalName>
+      <Generator>MSBuild:Compile</Generator>
+      <StronglyTypedFileName>$(IntermediateOutputPath)Icons.Designer.cs</StronglyTypedFileName>
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>HASCore.Resources</StronglyTypedNamespace>
+      <StronglyTypedClassName>Icons</StronglyTypedClassName>
+    </EmbeddedResource>
   </ItemGroup>
+
+  <!-- Design-time build skips the resource generation step, so
+       Icons.Designer.cs is absent from IntelliSense analysis and references
+       to the generated Icons class produce CS0103/CS0234 in the editor even
+       though 'dotnet build' succeeds, because it runs PrepareResources first.
+       Wiring PrepareResources into CoreCompileDependsOn makes the design-time
+       build generate the file too, keeping the editor in sync with the build.
+  -->
+  <PropertyGroup>
+    <CoreCompileDependsOn>PrepareResources;$(CoreCompileDependsOn)</CoreCompileDependsOn>
+  </PropertyGroup>
 
 </Project>

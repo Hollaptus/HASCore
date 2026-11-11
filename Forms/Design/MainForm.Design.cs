@@ -3,6 +3,7 @@
 using System.ComponentModel;
 // Also, declaring aliases for the same reason.
 using Timer = System.Windows.Forms.Timer;
+using HASCore.Helpers;
 using static HASCore.Soundboard.XMLSettings;
 
 namespace HASCore.Forms;
@@ -440,7 +441,7 @@ public partial class MainForm
 		// reloadDevicesButton
 		// 
 		this.reloadDevicesButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-		this.reloadDevicesButton.Image = (Image?)resources.GetObject("ReloadButton.Image");
+		this.reloadDevicesButton.Image = Icons.ReloadButton(11);
 		this.reloadDevicesButton.Location = new Point(318, 47);
 		this.reloadDevicesButton.Name = "reloadDevicesButton";
 		this.reloadDevicesButton.Size = new Size(22, 22);
@@ -451,7 +452,7 @@ public partial class MainForm
 		// reloadWindowsButton
 		// 
 		this.reloadWindowsButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-		this.reloadWindowsButton.Image = (Image?)resources.GetObject("ReloadButton.Image");
+		this.reloadWindowsButton.Image = Icons.ReloadButton(11);
 		this.reloadWindowsButton.Location = new Point(226, 45);
 		this.reloadWindowsButton.Name = "reloadWindowsButton";
 		this.reloadWindowsButton.Size = new Size(22, 22);
@@ -613,7 +614,7 @@ public partial class MainForm
 		this.notificationIcon.BalloonTipIcon = ToolTipIcon.Info;
 		this.notificationIcon.BalloonTipText = "Minimized to the tray.";
 		this.notificationIcon.BalloonTipTitle = "HAS Core";
-		this.notificationIcon.Icon = (Icon?)resources.GetObject("Notification.Icon");
+		this.notificationIcon.Icon = Icons.App;
 		this.notificationIcon.Text = "HAS Core";
 		this.notificationIcon.MouseClick += this.NotificationIcon_MouseClick;
 		
@@ -676,7 +677,7 @@ public partial class MainForm
 		this.AutoScaleDimensions = new SizeF(6F, 13F);
 		this.AutoScaleMode = AutoScaleMode.Font;
 		this.ClientSize = new Size(638, 499);
-		this.Icon = (Icon?)resources.GetObject("$this.Icon");
+		this.Icon = Icons.App;
 		this.MinimumSize = new Size(610, 530);
 		this.Name = "MainForm";
 		this.Text = "HAS Core";

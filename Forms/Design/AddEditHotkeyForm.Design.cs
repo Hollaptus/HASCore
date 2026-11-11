@@ -1,6 +1,7 @@
 ﻿// Explicitly declaring libraries that will be used
 // so we don't have gigantic lines of code of library imports.
 using System.ComponentModel;
+using HASCore.Helpers;
 
 namespace HASCore.Forms;
 
@@ -218,7 +219,7 @@ public partial class AddEditHotkeyForm
 		// 
 		this.reloadWindowsButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
 		this.reloadWindowsButton.Enabled = false;
-		this.reloadWindowsButton.Image = (Image?)resources.GetObject("reloadWindowsButton.Image");
+		this.reloadWindowsButton.Image = Icons.ReloadButton(11);
 		this.reloadWindowsButton.Location = new Point(246, 44);
 		this.reloadWindowsButton.Name = "reloadWindowsButton";
 		this.reloadWindowsButton.Size = new Size(22, 22);
@@ -301,7 +302,7 @@ public partial class AddEditHotkeyForm
 		this.AutoScaleDimensions = new SizeF(6F, 13F);
 		this.AutoScaleMode = AutoScaleMode.Font;
 		this.ClientSize = new Size(367, 231);
-		this.Icon = (Icon?)resources.GetObject("$this.Icon");
+		this.Icon = Icons.App;
 		this.MaximizeBox = false;
 		this.MaximumSize = new Size(4000, 270);
 		this.MinimumSize = new Size(375, 270);
