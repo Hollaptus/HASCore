@@ -1,6 +1,7 @@
 ﻿// Explicitly declaring libraries that will be used
 // so we don't have gigantic lines of code of library imports.
 using System.ComponentModel;
+using HASCore.Helpers;
 using static HASCore.Soundboard.XMLSettings;
 
 namespace HASCore.Forms;
@@ -434,7 +435,7 @@ partial class SettingsForm
 		this.Size = new Size(525, 425);
 		this.ClientSize = new Size(495, 395);
 		this.MinimumSize = new Size(390, 425);
-		this.Icon = (Icon?)resources.GetObject("$this.Icon");
+		this.Icon = Icons.App;
 		this.Name = "SettingsForm";
 		this.Text = "Soundboard Settings";
 		this.FormClosing += this.SettingsForm_FormClosing;

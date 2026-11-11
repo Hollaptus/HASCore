@@ -71,7 +71,7 @@ public partial class SettingsForm : Form
 	///		to this list, and upon clicking <see cref="okButton"/>, the list is
 	///		written back to <see cref="CurrentSettings"/> and saved to disk.
 	/// </remarks>
-	internal List<LoadXMLFile>? LoadXMLFilesList = CurrentSettings?.LoadXMLFiles;
+	internal List<LoadXMLFile>? LoadXMLFilesList = CurrentSettings?.LoadXMLFiles?.ToList();
 
 	/// Description
 	/// <summary>
@@ -139,20 +139,15 @@ public partial class SettingsForm : Form
 
 		if (LoadXMLFilesList is not null)
 		{
+			// Removing invalid entries before iteration.
+			LoadXMLFilesList.RemoveAll(file =>
+				!(file.Keys?.Count > 0) && String.IsNullOrWhiteSpace(file.XMLLocation));
+
 			// Iterating through list of XML presets.
 			foreach (LoadXMLFile file in LoadXMLFilesList)
 			{
 				// Checking if there are any keys in the hotkeys set.
 				Boolean correctKeysLength = file.Keys?.Count > 0;
-				// Checking if there is a path to a file in XML preset.
-				Boolean locationNotEmpty = !String.IsNullOrWhiteSpace(file.XMLLocation);
-
-				// Remove entry if location is empty.
-				if (!correctKeysLength && !locationNotEmpty)
-				{
-					LoadXMLFilesList.Remove(file);
-					continue;
-				}
 
 				// Adding a new item to ListView with set hotkeys.
 				ListViewItem item = new(
@@ -162,7 +157,7 @@ public partial class SettingsForm : Form
 				);
 
 				// Adding a path to XML preset that should be enabled through hotkeys.
-				item.SubItems.Add(locationNotEmpty ? file.XMLLocation : String.Empty);
+				item.SubItems.Add(file.XMLLocation ?? String.Empty);
 				// Adding the item to the view.
 				KeysLocationsListView?.Items.Add(item);
 			}
